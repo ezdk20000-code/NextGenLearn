@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { min-height: 100%; }
+body {
+  background: #0B0F17;
+  color: #F8FAFC;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: rgba(99,102,241,0.4); }
+
+.icon {
+  font-family: 'Material Symbols Rounded';
+  font-weight: normal; font-style: normal;
+  line-height: 1; letter-spacing: normal; text-transform: none;
+  display: inline-block; white-space: nowrap; direction: ltr;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  user-select: none;
+}
+.icon.fill { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+
+@layer components {
+  .card { @apply bg-s1 border border-line rounded-lg; }
+  .card-hover { @apply transition-colors hover:border-violet/40; }
+  .label { @apply text-[10px] font-bold uppercase tracking-[0.08em] text-mute; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all disabled:opacity-40 disabled:pointer-events-none; }
+  .btn-primary { @apply btn bg-violet text-white hover:shadow-glow; }
+  .btn-teal { @apply btn bg-teal text-[#00201c] hover:brightness-110; }
+  .btn-secondary { @apply btn bg-s1 border border-s3 text-ink hover:border-teal; }
+  .btn-ghost { @apply btn text-mute hover:text-ink hover:bg-s2; }
+  .chip { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold; }
+  .input { @apply w-full rounded-lg bg-[#0F172A] border border-line px-4 py-3 text-sm text-ink placeholder:text-dim outline-none focus:border-violet focus:ring-2 focus:ring-violet/20; }
+}
+
+.grid-bg {
+  background-image: radial-gradient(rgba(148,163,184,0.08) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+@keyframes dash { to { stroke-dashoffset: -20; } }
+.flow-line { stroke-dasharray: 6 4; animation: dash 1s linear infinite; }
+@keyframes pop { 0% { transform: scale(.9); opacity: 0 } 100% { transform: scale(1); opacity: 1 } }
+.pop { animation: pop .25s ease-out; }
+@keyframes travel { from { offset-distance: 0% } to { offset-distance: 100% } }
