@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { BUILTIN_CARDS, PLAYABLE, nodeById, trackById, trackOfNode, type CardDef } from './data'
 import { STARTER_CARDS } from './data/networks'
+import { seedTasks, tasksFromTrack, prefixOf, uid, type Task, type TaskStatus, type Sprint, type Check } from './lib/tasks'
 import { currentRetrievability, elapsedDays, newCard, review, DEFAULT_W, type CardStatus, type FsrsCard, type FsrsParams, type Grade } from './lib/fsrs'
 
 export type Rating = Grade // 1 Снова, 2 Трудно, 3 Хорошо, 4 Легко
@@ -55,9 +56,12 @@ interface State {
   srs: SrsSettings
   prefs: Prefs
   wishlist: string[]
+  tasks: Task[]
+  sprint: Sprint
+  nextKey: Record<string, number>
 }
 
-const KEY = 'ngl-state-v3'
+const KEY = 'ngl-state-v4'
 export const DEFAULT_SRS: SrsSettings = { requestRetention: 0.9, maximumInterval: 36500, newPerDay: 20, reviewsPerDay: 200 }
 
 /** Демо-состояние: несколько дней учёбы уже позади, чтобы экраны не были пустыми. */
@@ -106,6 +110,7 @@ function initialState(): State {
     srs: DEFAULT_SRS,
     prefs: { dailyMinutes: 45, mentorStyle: 'socratic', autoAmbient: false, reminders: true },
     wishlist: [],
+    ...seedTasks(),
   }
 }
 
@@ -157,10 +162,31 @@ interface Store extends State {
   setSrs: (p: Partial<SrsSettings>) => void
   setPrefs: (p: Partial<Prefs>) => void
   setName: (n: string) => void
+  addTask: (t: Partial<Task> & Pick<Task, 'title' | 'kind'>) => string
+  updateTask: (id: string, patch: Partial<Task>) => void
+  moveTask: (id: string, status: TaskStatus) => void
+  toggleCheck: (id: string, list: 'subtasks' | 'criteria', checkId: string) => void
+  addCheck: (id: string, list: 'subtasks' | 'criteria', text: string) => void
+  addComment: (id: string, text: string, parked?: boolean) => void
+  logTaskFocus: (id: string, min: number) => void
+  deleteTask: (id: string) => void
+  addTrackTasks: (trackId: string) => number
   exportJson: () => string
   reset: () => void
   toast: string | null
   notify: (msg: string) => void
+}
+
+/** Переход статуса: «Готово» только когда отмечены все критерии усвоения. */
+function applyStatus(t: Task, status: TaskStatus): Task {
+  let st = status
+  if (st === 'done' && t.criteria.some((c) => !c.done)) st = 'check'
+  return { ...t, status: st, doneAt: st === 'done' ? Date.now() : undefined }
+}
+
+/** Урок или лаборатория пройдены — связанные задачи идут на самопроверку или закрываются. */
+function completeLinked(tasks: Task[], pred: (t: Task) => boolean): Task[] {
+  return tasks.map((t) => (pred(t) && t.status !== 'done' ? applyStatus({ ...t, subtasks: t.subtasks.map((c) => ({ ...c, done: true })) }, 'done') : t))
 }
 
 const Ctx = createContext<Store | null>(null)
@@ -246,10 +272,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       completeLesson: (id, stats) => setState((s) => {
         if (s.lessonsDone.includes(id)) return s
         const xp = nodeById(id)?.xp ?? 50
-        return { ...s, lessonsDone: [...s.lessonsDone, id], xp: s.xp + xp, events: [...s.events, { type: 'lesson', ref: id, at: Date.now(), xp, ...stats }] }
+        return { ...s, lessonsDone: [...s.lessonsDone, id], xp: s.xp + xp, events: [...s.events, { type: 'lesson', ref: id, at: Date.now(), xp, ...stats }], tasks: completeLinked(s.tasks, (t) => t.kind === 'lesson' && t.nodeId === id) }
       }),
       completeLab: (labId, _nodeId, xp, mistakes) => setState((s) => (
-        s.labsDone.includes(labId) ? s : { ...s, labsDone: [...s.labsDone, labId], xp: s.xp + xp, events: [...s.events, { type: 'lab', ref: labId, at: Date.now(), xp, mistakes }] }
+        s.labsDone.includes(labId) ? s : { ...s, labsDone: [...s.labsDone, labId], xp: s.xp + xp, events: [...s.events, { type: 'lab', ref: labId, at: Date.now(), xp, mistakes }], tasks: completeLinked(s.tasks, (t) => t.kind === 'lab' && t.labId === labId) }
       )),
       addXp: (n) => setState((s) => ({ ...s, xp: s.xp + n })),
       rate: (cardId, g) => setState((s) => {
@@ -285,15 +311,65 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ...s,
         planDone: s.planDone.includes(id) ? s.planDone.filter((x) => x !== id) : [...s.planDone, id],
       })),
-      enroll: (trackId) => setState((s) => (
-        s.enrolled.includes(trackId) ? { ...s, activeTrack: trackId }
-          : { ...s, enrolled: [...s.enrolled, trackId], activeTrack: trackId, events: [...s.events, { type: 'enroll', ref: trackId, at: Date.now(), xp: 0 }] }
-      )),
+      enroll: (trackId) => setState((s) => {
+        if (s.enrolled.includes(trackId)) return { ...s, activeTrack: trackId }
+        const t = trackById(trackId)!
+        const prefix = prefixOf(trackId)
+        const roots = new Set(t.nodes.filter((n) => n.requires.length === 0).map((n) => n.id))
+        const fresh = tasksFromTrack(t, s.tasks, s.nextKey[prefix] ?? 1, (id) => roots.has(id) || nodeById(id)!.requires.every((r) => s.lessonsDone.includes(r)), (id) => s.lessonsDone.includes(id))
+        return {
+          ...s, enrolled: [...s.enrolled, trackId], activeTrack: trackId,
+          events: [...s.events, { type: 'enroll', ref: trackId, at: Date.now(), xp: 0 }],
+          tasks: [...s.tasks, ...fresh], nextKey: { ...s.nextKey, [prefix]: (s.nextKey[prefix] ?? 1) + fresh.length },
+        }
+      }),
       setActiveTrack: (trackId) => setState((s) => ({ ...s, activeTrack: trackId })),
       toggleWish: (trackId) => setState((s) => ({ ...s, wishlist: s.wishlist.includes(trackId) ? s.wishlist.filter((x) => x !== trackId) : [...s.wishlist, trackId] })),
       setSrs: (p) => setState((s) => ({ ...s, srs: { ...s.srs, ...p } })),
       setPrefs: (p) => setState((s) => ({ ...s, prefs: { ...s.prefs, ...p } })),
       setName: (n) => setState((s) => ({ ...s, name: n })),
+      addTask: (t) => {
+        const id = uid()
+        setState((s) => {
+          const prefix = prefixOf(t.trackId ?? null)
+          const n = s.nextKey[prefix] ?? 1
+          const task: Task = {
+            id, key: `${prefix}-${n}`, desc: '', trackId: null, status: 'todo', priority: 'med', estimate: 25, due: null, slot: null,
+            subtasks: [], criteria: [], comments: [], focusMin: 0, createdAt: Date.now(), ...t,
+          }
+          return { ...s, tasks: [...s.tasks, task], nextKey: { ...s.nextKey, [prefix]: n + 1 } }
+        })
+        return id
+      },
+      updateTask: (id, patch) => setState((s) => ({ ...s, tasks: s.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)) })),
+      moveTask: (id, status) => setState((s) => ({ ...s, tasks: s.tasks.map((t) => (t.id === id ? applyStatus(t, status) : t)) })),
+      toggleCheck: (id, list, checkId) => setState((s) => ({
+        ...s,
+        tasks: s.tasks.map((t) => {
+          if (t.id !== id) return t
+          const next = { ...t, [list]: t[list].map((c: Check) => (c.id === checkId ? { ...c, done: !c.done } : c)) }
+          // все критерии отмечены на самопроверке — задача усвоена
+          if (list === 'criteria' && next.status === 'check' && next.criteria.every((c) => c.done)) return applyStatus(next, 'done')
+          if (list === 'subtasks' && next.status === 'todo' && next.subtasks.some((c) => c.done)) return { ...next, status: 'doing' as TaskStatus }
+          return next
+        }),
+      })),
+      addCheck: (id, list, text) => setState((s) => ({ ...s, tasks: s.tasks.map((t) => (t.id === id ? { ...t, [list]: [...t[list], { id: uid(), t: text, done: false }] } : t)) })),
+      addComment: (id, text, parked) => setState((s) => ({ ...s, tasks: s.tasks.map((t) => (t.id === id ? { ...t, comments: [...t.comments, { at: Date.now(), author: 'me', text, parked }] } : t)) })),
+      logTaskFocus: (id, min) => setState((s) => ({
+        ...s, xp: s.xp + 20,
+        events: [...s.events, { type: 'focus', ref: id, at: Date.now(), xp: 20, minutes: min }],
+        tasks: s.tasks.map((t) => (t.id === id ? { ...t, focusMin: t.focusMin + min, status: t.status === 'todo' ? 'doing' : t.status } : t)),
+      })),
+      deleteTask: (id) => setState((s) => ({ ...s, tasks: s.tasks.filter((t) => t.id !== id) })),
+      addTrackTasks: (trackId) => {
+        const t = trackById(trackId)
+        if (!t) return 0
+        const prefix = prefixOf(trackId)
+        const fresh = tasksFromTrack(t, state.tasks, state.nextKey[prefix] ?? 1, (id) => status(id) !== 'locked', (id) => state.lessonsDone.includes(id))
+        if (fresh.length) setState((s) => ({ ...s, tasks: [...s.tasks, ...fresh], nextKey: { ...s.nextKey, [prefix]: (s.nextKey[prefix] ?? 1) + fresh.length } }))
+        return fresh.length
+      },
       exportJson: () => JSON.stringify(state, null, 2),
       reset: () => setState(initialState()),
     }

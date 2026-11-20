@@ -27,6 +27,11 @@ export default function Review() {
   const cardId = queue[idx]
   const card = cardId ? s.cardDef(cardId) : undefined
   const finished = idx >= queue.length
+  // Сессия повторения завершена — закрываем задачи PlanFlow «Повторить карточки»
+  useEffect(() => {
+    if (!finished || queue.length === 0) return
+    s.tasks.filter((t) => t.kind === 'review' && t.status !== 'done' && (!deck || t.trackId === deck)).forEach((t) => s.moveTask(t.id, 'done'))
+  }, [finished]) // eslint-disable-line
 
   const rate = (r: Rating) => {
     if (!cardId) return

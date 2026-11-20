@@ -4,7 +4,8 @@ import { dayKey, useStore } from '../store'
 import { nodeById, trackById } from '../data'
 import { Bar, Icon, Ring, Stat, plural } from '../components/ui'
 import { thumbStyle } from '../components/TrackCover'
-import { usePlan } from './planData'
+import { KINDS, PRIORITY_ORDER, dateKey } from '../lib/tasks'
+import { PriorityChip } from '../components/task-ui'
 
 export default function Today() {
   const s = useStore()
@@ -12,7 +13,11 @@ export default function Today() {
   const [topic, setTopic] = useState('')
   const due = s.dueCards().length
   const next = s.nextNode ? nodeById(s.nextNode) : undefined
-  const plan = usePlan()
+  const todayKey = dateKey(Date.now())
+  const plan = s.tasks
+    .filter((t) => t.slot?.date === todayKey || (t.due && dateKey(t.due) === todayKey) || t.status === 'doing' || t.status === 'check')
+    .sort((a, b) => (a.slot?.start ?? '99') .localeCompare(b.slot?.start ?? '99') || PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])
+  const planMin = plan.filter((t) => t.status !== 'done').reduce((a, t) => a + t.estimate, 0)
   const TRACK = trackById(s.activeTrack)!
   const NODES = TRACK.nodes
   const doneCount = NODES.filter((n) => s.status(n.id) === 'done').length
@@ -80,30 +85,32 @@ export default function Today() {
 
       <div className="grid gap-4 lg:grid-cols-5">
         {/* План на день */}
-        <div className="lg:col-span-3 card p-5">
+        <div className="lg:col-span-3 card p-5 min-w-0">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="label">План на сегодня</div>
-              <div className="font-semibold mt-1">Собран под твои {s.prefs.dailyMinutes} минут в день</div>
+              <div className="label">PlanFlow · сегодня</div>
+              <div className="font-semibold mt-1">{plan.filter((t) => t.status !== 'done').length} задач · ~{planMin} мин из {s.prefs.dailyMinutes}</div>
             </div>
-            <Link to="/plan" className="btn-ghost !px-2 !py-1.5 text-xs">Весь план <Icon name="arrow_forward" className="text-[16px]" /></Link>
+            <Link to="/plan" className="btn-ghost !px-2 !py-1.5 text-xs">Доска <Icon name="arrow_forward" className="text-[16px]" /></Link>
           </div>
           <div className="space-y-2">
-            {plan.map((p) => {
-              const done = s.planDone.includes(p.id)
+            {plan.map((t) => {
+              const done = t.status === 'done'
               return (
-                <div key={p.id} className={`flex items-center gap-3 rounded-lg border border-line p-3 ${done ? 'opacity-50' : 'hover:border-violet/40'}`}>
-                  <button onClick={() => s.togglePlan(p.id)} aria-label="Отметить"
-                    className={`w-5 h-5 rounded-md border grid place-items-center shrink-0 ${done ? 'bg-teal border-teal' : 'border-s3'}`}>
+                <div key={t.id} className={`flex items-center gap-3 rounded-lg border border-line p-3 ${done ? 'opacity-50' : 'hover:border-violet/40'}`}>
+                  <button onClick={() => { s.moveTask(t.id, done ? 'doing' : 'done'); if (!done && t.criteria.some((c) => !c.done)) s.notify('Задача на самопроверке — отметь критерии усвоения') }} aria-label="Отметить"
+                    className={`w-5 h-5 rounded-md border grid place-items-center shrink-0 ${done ? 'bg-teal border-teal' : t.status === 'check' ? 'border-amber' : 'border-s3'}`}>
                     {done && <Icon name="check" className="text-[16px] text-white" />}
                   </button>
-                  <span className="font-mono text-xs text-dim w-11">{p.time}</span>
-                  <Icon name={p.icon} className={`text-[20px] ${p.tone}`} />
-                  <button onClick={() => nav(p.to)} className={`flex-1 text-left text-sm font-medium min-w-0 truncate ${done ? 'line-through' : ''}`}>{p.title}</button>
-                  <span className="text-xs text-dim hidden sm:block">{p.minutes} мин</span>
+                  <span className="font-mono text-xs text-dim w-11">{t.slot?.start ?? '—'}</span>
+                  <Icon name={KINDS[t.kind].icon} className="text-[20px] text-violet-soft" />
+                  <button onClick={() => nav(`/plan/task/${t.id}`)} className={`flex-1 text-left text-sm font-medium min-w-0 truncate ${done ? 'line-through' : ''}`}>{t.title}</button>
+                  <span className="hidden sm:block"><PriorityChip p={t.priority} /></span>
+                  <span className="text-xs text-dim hidden md:block font-mono">{t.estimate}м</span>
                 </div>
               )
             })}
+            {plan.length === 0 && <div className="text-sm text-dim">На сегодня задач нет. <Link to="/plan" className="text-violet-soft">Запланировать</Link></div>}
           </div>
         </div>
 

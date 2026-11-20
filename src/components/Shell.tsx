@@ -16,8 +16,11 @@ const GROUPS = [
     { to: '/cards', icon: 'style', label: 'Флеш-карты' },
     { to: '/notes', icon: 'edit_note', label: 'Конспекты' },
   ] },
+  { title: 'PlanFlow', items: [
+    { to: '/plan', icon: 'view_kanban', label: 'Учебные задачи' },
+    { to: '/focus', icon: 'timer', label: 'Фокус' },
+  ] },
   { title: 'Прогресс', items: [
-    { to: '/plan', icon: 'event_note', label: 'План и фокус' },
     { to: '/analytics', icon: 'monitoring', label: 'Аналитика' },
     { to: '/history', icon: 'workspace_premium', label: 'Портфолио' },
   ] },
@@ -32,6 +35,7 @@ const MOBILE = [
 export default function Shell() {
   const s = useStore()
   const due = s.dueCards().length
+  const openTasks = s.tasks.filter((t) => t.status === 'doing' || t.status === 'check').length
   const loc = useLocation()
   const [more, setMore] = useState(false)
   const active = trackById(s.activeTrack)
@@ -39,10 +43,11 @@ export default function Shell() {
 
   const link = (n: { to: string; icon: string; label: string; end?: boolean }) => (
     <NavLink key={n.to} to={n.to} end={n.end}
-      className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${isActive || (n.to === '/track' && loc.pathname.startsWith('/track')) ? 'bg-violet/15 text-violet-soft' : 'text-mute hover:text-ink hover:bg-s1'}`}>
+      className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${isActive || (n.to === '/track' && loc.pathname.startsWith('/track')) || (n.to === '/plan' && loc.pathname.startsWith('/plan')) ? 'bg-violet/15 text-violet-soft' : 'text-mute hover:text-ink hover:bg-s1'}`}>
       <Icon name={n.icon} className="text-[20px]" />
       <span className="flex-1">{n.label}</span>
       {n.to === '/cards' && due > 0 && <span className="chip bg-amber/15 text-amber-soft !py-0.5">{due}</span>}
+      {n.to === '/plan' && openTasks > 0 && <span className="chip bg-violet/15 text-violet-soft !py-0.5 font-mono">{openTasks}</span>}
     </NavLink>
   )
 

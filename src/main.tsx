@@ -22,7 +22,9 @@ import Analytics from './pages/Analytics'
 import History from './pages/History'
 import Notes from './pages/Notes'
 import DeepStudy from './pages/DeepStudy'
-import Plan from './pages/Plan'
+import PlanBoard from './pages/PlanBoard'
+import TaskDetail from './pages/TaskDetail'
+import FocusSession from './pages/FocusSession'
 import Profile from './pages/Profile'
 
 createRoot(document.getElementById('root')!).render(
@@ -50,7 +52,9 @@ createRoot(document.getElementById('root')!).render(
             <Route path="history" element={<History />} />
             <Route path="notes" element={<Notes />} />
             <Route path="deep" element={<DeepStudy />} />
-            <Route path="plan" element={<Plan />} />
+            <Route path="plan" element={<PlanBoard />} />
+            <Route path="plan/task/:id" element={<TaskDetail />} />
+            <Route path="focus" element={<FocusSession />} />
             <Route path="profile" element={<Profile />} />
             <Route path="*" element={<Today />} />
           </Route>
