@@ -134,7 +134,7 @@ export default function Review() {
           </div>
           <div className="card p-4 text-sm text-mute">
             <div className="label mb-2">Как это работает</div>
-            Алгоритм FSRS-4.5. Каждая карточка хранит <b className="text-ink">стабильность</b> (сколько дней ты её помнишь) и <b className="text-ink">сложность</b>. Чем легче вспомнил — тем дальше следующий показ.
+            Алгоритм FSRS-6. Каждая карточка хранит <b className="text-ink">стабильность</b> (сколько дней ты её помнишь) и <b className="text-ink">сложность</b>. Чем легче вспомнил — тем дальше следующий показ.
           </div>
         </aside>
       </div>

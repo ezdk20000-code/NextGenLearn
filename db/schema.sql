@@ -184,7 +184,7 @@ CREATE TABLE lab_attempts (
 CREATE INDEX lab_attempts_user ON lab_attempts (user_id, lab_id);
 
 -- ---------------------------------------------------------------------------
--- 5. Интервальное повторение (FSRS-4.5)
+-- 5. Интервальное повторение (FSRS-6)
 -- ---------------------------------------------------------------------------
 CREATE TYPE card_status AS ENUM ('new', 'learning', 'review', 'relearning');
 
@@ -223,7 +223,7 @@ CREATE INDEX review_logs_user_time ON review_logs (user_id, reviewed_at);
 
 CREATE TABLE user_fsrs_params (
     user_id            uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    weights            real[] NOT NULL CHECK (array_length(weights, 1) = 17),
+    weights            real[] NOT NULL CHECK (array_length(weights, 1) = 21), -- 21 вес FSRS-6,
     request_retention  real NOT NULL DEFAULT 0.9 CHECK (request_retention BETWEEN 0.7 AND 0.99),
     maximum_interval   integer NOT NULL DEFAULT 36500,
     optimized_at       timestamptz
