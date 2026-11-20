@@ -62,7 +62,7 @@ export default function NegotiationLab() {
           {/* Реплика оппонента */}
           <div className="card p-5">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-amber to-rose grid place-items-center font-bold text-[#2a1700]">В</div>
+              <img src="covers/viktor.webp" alt="Виктор К." className="w-12 h-12 rounded-full object-cover border border-amber/40" />
               <div className="flex-1"><div className="font-semibold">{cur.speaker}</div><div className="text-xs text-dim">{cur.role}</div></div>
               <span className="chip bg-rose/10 text-rose-soft border border-rose/30">{cur.mood}</span>
             </div>

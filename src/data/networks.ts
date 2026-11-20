@@ -113,7 +113,7 @@ export const NETWORKS: Track = {
     'Будешь уверенно читать IP-адреса, маски и делить сеть на подсети',
     'Поймёшь, как TCP добивается надёжности и чем от него отличается UDP',
   ],
-  cover: { from: '#4F46E5', to: '#0D9488', icon: 'lan' },
+  cover: { from: '#4F46E5', to: '#0D9488', icon: 'lan', image: 'covers/networks.webp' },
   playable: true,
   nodes: NODES,
   lessons: LESSONS,

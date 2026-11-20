@@ -16,6 +16,10 @@ export default function Notes() {
 
   return (
     <div>
+      <div className="relative h-32 md:h-44 rounded-lg overflow-hidden mb-6 border border-line">
+        <img src="covers/notes.webp" alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-r from-canvas via-canvas/60 to-transparent" />
+      </div>
       <PageHeader eyebrow="Память" title="Библиотека конспектов" sub="Твои заметки из уроков и Deep Study, а также объяснения «своими словами». Пересказ — лучший способ проверить понимание."
         right={<Link to="/deep" className="btn-primary"><Icon name="center_focus_strong" className="text-[18px]" />Новая сессия Deep Study</Link>} />
       <div className="flex flex-col sm:flex-row gap-3 mb-6">

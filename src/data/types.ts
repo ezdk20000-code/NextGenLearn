@@ -61,7 +61,8 @@ export interface Track {
   formats: Format[]
   tags: string[]
   outcomes: string[]
-  cover: { from: string; to: string; icon: string }
+  /** image — путь к обложке в public/covers; без него рисуется градиент */
+  cover: { from: string; to: string; icon: string; image?: string }
   playable: boolean
   isNew?: boolean
   nodes: GraphNode[]

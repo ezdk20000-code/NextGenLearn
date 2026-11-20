@@ -92,7 +92,12 @@ export default function DeepStudy() {
 
         {/* Материал и самопроверка */}
         <div className="space-y-4 min-w-0">
-          <div className="card p-5">
+          <div className="card overflow-hidden">
+            <div className="relative h-36 md:h-44">
+              <img src="covers/deep-study.webp" alt="" className="absolute inset-0 w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-s1 via-s1/30 to-transparent" />
+            </div>
+            <div className="p-5 -mt-8 relative">
             <div className="flex items-center justify-between">
               <div className="label">Учебный материал</div>
               <Link to={`/lesson/${nodeId}`} className="text-xs text-violet-soft hover:underline">Открыть урок</Link>
@@ -105,6 +110,7 @@ export default function DeepStudy() {
                 {material.terms.map((t) => <div key={t.term} className="rounded-lg bg-s2/60 p-3"><div className="text-sm font-semibold text-violet-soft">{t.term}</div><div className="text-xs text-mute mt-0.5">{t.def}</div></div>)}
               </div>
             )}
+            </div>
           </div>
 
           <div className="card p-5 border-amber/30">

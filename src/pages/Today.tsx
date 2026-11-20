@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { dayKey, useStore } from '../store'
 import { nodeById, trackById } from '../data'
 import { Bar, Icon, Ring, Stat, plural } from '../components/ui'
+import { thumbStyle } from '../components/TrackCover'
 import { usePlan } from './planData'
 
 export default function Today() {
@@ -112,7 +113,7 @@ export default function Today() {
           <div className="space-y-2 mt-3">
             {[TRACK, ...others].map((t) => (
               <Link key={t.id} to={`/track/${t.id}`} onClick={() => s.setActiveTrack(t.id)} className={`flex items-center gap-3 rounded-lg border p-3 ${t.id === s.activeTrack ? 'border-violet/50 bg-violet/5' : 'border-line hover:border-s3'}`}>
-                <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: `linear-gradient(135deg, ${t.cover.from}, ${t.cover.to})` }}><Icon name={t.cover.icon} className="text-[20px]" /></div>
+                <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={thumbStyle(t)}/>
                 <div className="flex-1 min-w-0"><div className="text-sm font-semibold truncate">{t.title}</div><div className="mt-1.5"><Bar value={s.progressOf(t.id)} color="teal" /></div></div>
                 <span className="font-mono text-xs text-dim">{s.progressOf(t.id)}%</span>
               </Link>

@@ -78,7 +78,7 @@ export const NEGOTIATION: Track = {
     'Подготовишь сильную BATNA до разговора и перестанешь бояться слова «нет»',
     'Спокойно выдержишь дедлайн, ультиматум или «окончательное предложение»',
   ],
-  cover: { from: '#B45309', to: '#4F46E5', icon: 'handshake' },
+  cover: { from: '#B45309', to: '#4F46E5', icon: 'handshake', image: 'covers/negotiation.webp' },
   playable: true,
   nodes: NODES,
   lessons: LESSONS,

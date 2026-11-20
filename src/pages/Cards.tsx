@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { nodeById, trackById } from '../data'
 import { useStore } from '../store'
 import { currentRetrievability } from '../lib/fsrs'
+import { thumbStyle } from '../components/TrackCover'
 import { Icon, PageHeader, Stat } from '../components/ui'
 
 export default function Cards() {
@@ -54,7 +55,7 @@ export default function Cards() {
           {decks.map(({ t, ids, due: d, mature, avgS, available }) => (
             <div key={t.id} className="card overflow-hidden">
               <div className="p-5 flex flex-col sm:flex-row gap-4 sm:items-center">
-                <div className="w-12 h-12 rounded-lg grid place-items-center shrink-0" style={{ background: `linear-gradient(135deg, ${t.cover.from}, ${t.cover.to})` }}><Icon name={t.cover.icon} /></div>
+                <div className="w-12 h-12 rounded-lg grid place-items-center shrink-0" style={thumbStyle(t)}/>
                 <div className="flex-1 min-w-0">
                   <div className="label">{t.category}</div>
                   <div className="font-bold">{t.title}</div>
