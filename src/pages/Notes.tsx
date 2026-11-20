@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { nodeById, trackById, trackOfNode } from '../data'
 import { useStore } from '../store'
 import { Icon, PageHeader } from '../components/ui'
+import AiCardsButton from '../components/AiCardsButton'
 
 export default function Notes() {
   const s = useStore()
@@ -64,6 +65,7 @@ export default function Notes() {
                       ? <textarea className="input mt-3 min-h-[160px] !text-[13px] leading-6" value={draft} onChange={(e) => setDraft(e.target.value)} autoFocus />
                       : <p className="text-sm text-ink/85 mt-3 whitespace-pre-wrap leading-6 flex-1">{text}</p>}
                     <div className="text-[11px] text-dim mt-3">{text.split(/\s+/).filter(Boolean).length} слов</div>
+                    <AiCardsButton nodeId={id} topic={n.title} text={text} />
                   </article>
                 )
               })}

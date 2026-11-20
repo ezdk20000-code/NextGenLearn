@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react'
 import { LAYERS } from '../data/networks'
 import { Icon, Md } from './ui'
+import { aiErrorText, useAi } from '../ai/AiContext'
+import { offlineChannel } from '../ai/channels'
+import { useStore } from '../store'
 
 // Каждый блок сообщает onDone(), когда пользователь выполнил его — урок
 // открывает следующий блок. Это «примитивы», из которых собираются уроки.
@@ -138,26 +141,49 @@ export function OrderBlock({ q, items, explain, onDone }: { q: string; items: st
   )
 }
 
-export function FeynmanBlock({ prompt, keywords, onDone }: { prompt: string; keywords: string[]; onDone: (text: string) => void }) {
+export function FeynmanBlock({ prompt, keywords, topic, onDone }: { prompt: string; keywords: string[]; topic?: string; onDone: (text: string) => void }) {
+  const ai = useAi()
+  const s = useStore()
   const [text, setText] = useState('')
-  const [fb, setFb] = useState<null | { ok: boolean; msg: string }>(null)
-  const check = () => {
-    const lower = text.toLowerCase()
-    const hits = keywords.filter((k) => lower.includes(k)).length
-    if (text.trim().length < 30) setFb({ ok: false, msg: 'Слишком коротко. Попробуй 2–3 предложения, как будто объясняешь другу.' })
-    else if (hits === 0) setFb({ ok: false, msg: 'Хорошая попытка, но не хватает ключевой идеи. Подсказка: вспомни аналогию из урока.' })
-    else { setFb({ ok: true, msg: 'Отличное объяснение — ты уловил главную идею. Я добавил его в твой конспект.' }); onDone(text.trim()) }
+  const [busy, setBusy] = useState(false)
+  const [fb, setFb] = useState<null | { ok: boolean; msg: string; score?: number; missing?: string[]; by: string }>(null)
+  const check = async () => {
+    if (text.trim().length < 20) { setFb({ ok: false, msg: 'Слишком коротко. Попробуй 2–3 предложения, как будто объясняешь другу.', by: '' }); return }
+    setBusy(true); setFb(null)
+    let channel = ai.channel
+    let v
+    try {
+      v = await channel.grade(ai.learner(topic ? { title: topic, summary: prompt } : undefined), { prompt, keyIdeas: keywords, answer: text.trim() })
+    } catch (e) {
+      // ИИ недоступен — проверяем быстро по ключевым словам, чтобы урок не застревал
+      channel = offlineChannel
+      v = await offlineChannel.grade(ai.learner(), { prompt, keyIdeas: keywords, answer: text.trim() })
+      s.notify(aiErrorText(e))
+    } finally { setBusy(false) }
+    if (v.insight) s.remember(v.insight)
+    setFb({ ok: v.understood, msg: v.feedback, score: v.score, missing: v.missing, by: channel.label })
+    if (v.understood) onDone(text.trim())
   }
   return (
     <div className="rounded-lg border border-line bg-s1 p-4 md:p-5">
       <div className="label mb-2 flex items-center gap-1.5 text-violet-soft"><Icon name="record_voice_over" className="text-[16px]" />Метод Фейнмана · объясни сам</div>
       <div className="font-semibold">{prompt}</div>
-      <textarea className="input mt-3 min-h-[100px]" value={text} onChange={(e) => { setText(e.target.value); setFb(null) }} placeholder="Пиши простыми словами…" disabled={fb?.ok} />
+      <textarea className="input mt-3 min-h-[100px]" value={text} onChange={(e) => { setText(e.target.value); if (!fb?.ok) setFb(null) }} placeholder="Пиши простыми словами…" disabled={fb?.ok || busy} aria-label="Твоё объяснение" />
       <div className="flex items-center justify-between mt-3 gap-3">
-        <span className="text-xs text-dim flex items-center gap-1"><Icon name="smart_toy" className="text-[16px]" />Проверит ИИ-наставник (в прототипе — по ключевым словам)</span>
-        {!fb?.ok && <button onClick={check} className="btn-secondary !py-2">Проверить</button>}
+        <span className="text-xs text-dim flex items-center gap-1"><Icon name="smart_toy" className="text-[16px]" />Проверит ИИ-наставник по смыслу</span>
+        {!fb?.ok && <button onClick={check} disabled={busy} className="btn-secondary !py-2">{busy ? 'Наставник читает…' : 'Проверить'}</button>}
       </div>
-      {fb && <div className={`mt-3 rounded-lg p-3 text-sm pop ${fb.ok ? 'bg-teal/10' : 'bg-amber/10 text-amber-soft'}`}>{fb.msg}</div>}
+      {fb && (
+        <div className={`mt-3 rounded-lg p-3 text-sm pop ${fb.ok ? 'bg-teal/10' : 'bg-amber/10'}`}>
+          <div className="flex items-center justify-between gap-2">
+            <b className={fb.ok ? 'text-teal-soft' : 'text-amber-soft'}>{fb.ok ? 'Понятно объяснено' : 'Пока не хватает'}</b>
+            {fb.score !== undefined && fb.by && <span className="font-mono text-xs text-dim">{fb.score}/100 · {fb.by}</span>}
+          </div>
+          <p className="mt-1">{fb.msg}</p>
+          {!fb.ok && fb.missing && fb.missing.length > 0 && <ul className="mt-2 text-xs text-mute list-disc pl-4">{fb.missing.map((m) => <li key={m}>{m}</li>)}</ul>}
+          {!fb.ok && <button onClick={() => ai.openMentor(`Я пытаюсь объяснить: «${prompt}». Мой вариант: «${text.trim()}». Что я упускаю?`)} className="text-xs text-violet-soft hover:underline mt-2">Разобрать с наставником</button>}
+        </div>
+      )}
     </div>
   )
 }

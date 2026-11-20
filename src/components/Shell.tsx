@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { trackById } from '../data'
 import { useStore } from '../store'
 import { Icon } from './ui'
+import MentorDrawer from './MentorDrawer'
 
 const GROUPS = [
   { title: 'Обучение', items: [
@@ -126,7 +127,7 @@ export default function Shell() {
       {more && (
         <div className="md:hidden fixed inset-0 z-20 bg-black/50" onClick={() => setMore(false)}>
           <div className="absolute bottom-[60px] inset-x-0 rounded-t-xl border-t border-line bg-s1 p-4 grid grid-cols-3 gap-2 pop" onClick={(e) => e.stopPropagation()}>
-            {[...GROUPS.flatMap((g) => g.items), { to: '/profile', icon: 'person', label: 'Профиль' }, { to: '/settings/fsrs', icon: 'tune', label: 'Настройки FSRS' }]
+            {[...GROUPS.flatMap((g) => g.items), { to: '/profile', icon: 'person', label: 'Профиль' }, { to: '/settings/ai', icon: 'smart_toy', label: 'ИИ-наставник' }, { to: '/settings/fsrs', icon: 'tune', label: 'Настройки FSRS' }]
               .filter((n) => !MOBILE.some((m) => m.to === n.to))
               .map((n) => (
                 <Link key={n.to} to={n.to} className="flex flex-col items-center gap-1 rounded-lg p-3 text-xs text-mute hover:bg-s2 text-center">
@@ -136,6 +137,8 @@ export default function Shell() {
           </div>
         </div>
       )}
+
+      <MentorDrawer />
 
       {s.toast && (
         <div className="fixed z-50 bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 pop w-max max-w-[calc(100vw-32px)]">

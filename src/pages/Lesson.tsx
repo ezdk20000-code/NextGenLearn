@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { lessonById, nodeById, trackOfNode, type LessonBlock } from '../data'
 import { useStore } from '../store'
 import { Bar, Icon, Md } from '../components/ui'
+import { useMentorTopic } from '../ai/AiContext'
 import { AnalogyBlock, FeynmanBlock, LayersBlock, OrderBlock, QuizBlock, TermsBlock } from '../components/blocks'
 
 const needsAction = (b: LessonBlock) => b.type === 'quiz' || b.type === 'order' || b.type === 'feynman'
@@ -19,6 +20,8 @@ export default function LessonPage() {
   const [finished, setFinished] = useState(false)
   const [note, setNote] = useState(s.notes[id] ?? '')
   const endRef = useRef<HTMLDivElement>(null)
+  const material = lesson ? lesson.blocks.map((b) => (b.type === 'text' || b.type === 'analogy' ? b.md : b.type === 'terms' ? b.items.map((t) => `${t.term} — ${t.def}`).join('; ') : '')).filter(Boolean).join('\n') : ''
+  useMentorTopic(node ? { title: node.title, summary: node.short, material } : null)
 
   useEffect(() => { setShown(1); setSolved({}); setFinished(false); setFirstTry(0); setNote(s.notes[id] ?? '') }, [id]) // eslint-disable-line
   useEffect(() => { if (shown > 1) endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, [shown, finished])
@@ -59,7 +62,7 @@ export default function LessonPage() {
               {b.type === 'widget' && b.widget === 'layers' && <LayersBlock />}
               {b.type === 'quiz' && <QuizBlock {...b} onDone={(ok) => { setSolved((x) => ({ ...x, [i]: true })); if (ok) setFirstTry((n) => n + 1) }} />}
               {b.type === 'order' && <OrderBlock {...b} onDone={() => { setSolved((x) => ({ ...x, [i]: true })); setFirstTry((n) => n + 1) }} />}
-              {b.type === 'feynman' && <FeynmanBlock {...b} onDone={(text) => { setSolved((x) => ({ ...x, [i]: true })); setFirstTry((n) => n + 1); setNote((n) => (n ? n + '\n\n' : '') + `Своими словами: ${text}`) }} />}
+              {b.type === 'feynman' && <FeynmanBlock {...b} topic={node.title} onDone={(text) => { setSolved((x) => ({ ...x, [i]: true })); setFirstTry((n) => n + 1); setNote((n) => (n ? n + '\n\n' : '') + `Своими словами: ${text}`) }} />}
               {b.type === 'terms' && <TermsBlock items={b.items} />}
             </div>
           ))}

@@ -255,3 +255,42 @@ CREATE TABLE focus_sessions (
     started_at  timestamptz NOT NULL DEFAULT now(),
     ended_at    timestamptz
 );
+
+-- ---------------------------------------------------------------------------
+-- 7. ИИ-наставник: личная интеграция каждого ученика
+-- ---------------------------------------------------------------------------
+-- Какой моделью решать какую задачу, какие научные инструменты разрешены,
+-- стиль наставника. Поставщики описаны в server/src/registry.ts и models.json.
+CREATE TABLE ai_profiles (
+    user_id     uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    style       text NOT NULL DEFAULT 'socratic' CHECK (style IN ('socratic', 'direct')),
+    routing     jsonb NOT NULL DEFAULT '{"mentor":"claude","grade":"claude","cards":"claude"}',
+    effort      jsonb NOT NULL DEFAULT '{"mentor":"medium","grade":"low","cards":"low"}',
+    tools       text[],                          -- NULL = все доступные инструменты
+    updated_at  timestamptz NOT NULL DEFAULT now()
+);
+
+-- Наблюдения наставника об ученике («путает MAC и IP»). Ученик видит и удаляет их.
+CREATE TABLE ai_memory (
+    id          bigserial PRIMARY KEY,
+    user_id     uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    fact        text NOT NULL CHECK (length(fact) <= 300),
+    source      text NOT NULL DEFAULT 'grade' CHECK (source IN ('grade', 'chat', 'user')),
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (user_id, fact)
+);
+
+-- Учёт расходов по ученику и модели: лимиты, биллинг, качество.
+CREATE TABLE ai_usage (
+    id            bigserial PRIMARY KEY,
+    user_id       uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    task          text NOT NULL CHECK (task IN ('mentor', 'grade', 'cards')),
+    provider      text NOT NULL,
+    model         text NOT NULL,
+    input_tokens  integer NOT NULL DEFAULT 0,
+    output_tokens integer NOT NULL DEFAULT 0,
+    tool_calls    smallint NOT NULL DEFAULT 0,
+    refused       boolean NOT NULL DEFAULT false,
+    created_at    timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX ai_usage_user_time ON ai_usage (user_id, created_at);

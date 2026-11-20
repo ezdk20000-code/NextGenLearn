@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client'
 import { HashRouter, Route, Routes } from 'react-router-dom'
 import './index.css'
 import { StoreProvider } from './store'
+import { AiProvider } from './ai/AiContext'
+import AiSettings from './pages/AiSettings'
 import Shell from './components/Shell'
 import Today from './pages/Today'
 import Catalog from './pages/Catalog'
@@ -30,6 +32,7 @@ import Profile from './pages/Profile'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <StoreProvider>
+      <AiProvider>
       <HashRouter>
         <Routes>
           <Route element={<Shell />}>
@@ -56,10 +59,12 @@ createRoot(document.getElementById('root')!).render(
             <Route path="plan/task/:id" element={<TaskDetail />} />
             <Route path="focus" element={<FocusSession />} />
             <Route path="profile" element={<Profile />} />
+            <Route path="settings/ai" element={<AiSettings />} />
             <Route path="*" element={<Today />} />
           </Route>
         </Routes>
       </HashRouter>
+      </AiProvider>
     </StoreProvider>
   </StrictMode>,
 )

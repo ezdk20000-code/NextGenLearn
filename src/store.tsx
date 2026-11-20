@@ -39,6 +39,14 @@ export interface LearnEvent {
 }
 export interface SrsSettings { requestRetention: number; maximumInterval: number; newPerDay: number; reviewsPerDay: number }
 export interface Prefs { dailyMinutes: number; mentorStyle: 'socratic' | 'direct'; autoAmbient: boolean; reminders: boolean }
+/** Личная ИИ-интеграция ученика */
+export interface AiPrefs {
+  channel: 'auto' | 'account' | 'server' | 'offline'
+  serverUrl: string
+  tiers: { mentor: 'quick' | 'default' | 'complex'; grade: 'quick' | 'default' | 'complex'; cards: 'quick' | 'default' | 'complex' }
+  tools: string[] | null // null — все научные инструменты
+}
+export const DEFAULT_AI: AiPrefs = { channel: 'auto', serverUrl: '', tiers: { mentor: 'default', grade: 'quick', cards: 'quick' }, tools: null }
 
 interface State {
   name: string
@@ -59,9 +67,12 @@ interface State {
   tasks: Task[]
   sprint: Sprint
   nextKey: Record<string, number>
+  userId: string
+  ai: AiPrefs
+  aiMemory: string[]
 }
 
-const KEY = 'ngl-state-v4'
+const KEY = 'ngl-state-v5'
 export const DEFAULT_SRS: SrsSettings = { requestRetention: 0.9, maximumInterval: 36500, newPerDay: 20, reviewsPerDay: 200 }
 
 /** Демо-состояние: несколько дней учёбы уже позади, чтобы экраны не были пустыми. */
@@ -111,6 +122,9 @@ function initialState(): State {
     prefs: { dailyMinutes: 45, mentorStyle: 'socratic', autoAmbient: false, reminders: true },
     wishlist: [],
     ...seedTasks(),
+    userId: `u-${Math.random().toString(36).slice(2, 10)}`,
+    ai: DEFAULT_AI,
+    aiMemory: [],
   }
 }
 
@@ -171,6 +185,9 @@ interface Store extends State {
   logTaskFocus: (id: string, min: number) => void
   deleteTask: (id: string) => void
   addTrackTasks: (trackId: string) => number
+  setAi: (p: Partial<AiPrefs>) => void
+  remember: (fact: string) => void
+  forget: (fact: string) => void
   exportJson: () => string
   reset: () => void
   toast: string | null
@@ -370,6 +387,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (fresh.length) setState((s) => ({ ...s, tasks: [...s.tasks, ...fresh], nextKey: { ...s.nextKey, [prefix]: (s.nextKey[prefix] ?? 1) + fresh.length } }))
         return fresh.length
       },
+      setAi: (p) => setState((s) => ({ ...s, ai: { ...s.ai, ...p, tiers: { ...s.ai.tiers, ...p.tiers } } })),
+      remember: (fact) => setState((s) => {
+        const f = fact.trim()
+        return !f || s.aiMemory.includes(f) ? s : { ...s, aiMemory: [...s.aiMemory, f].slice(-30) }
+      }),
+      forget: (fact) => setState((s) => ({ ...s, aiMemory: s.aiMemory.filter((x) => x !== fact) })),
       exportJson: () => JSON.stringify(state, null, 2),
       reset: () => setState(initialState()),
     }

@@ -5,6 +5,7 @@ import { useStore } from '../store'
 import { KINDS, STATUSES, statusOf, type Check } from '../lib/tasks'
 import { DuePill, PriorityChip, StatusChip } from '../components/task-ui'
 import { Icon } from '../components/ui'
+import { useMentorTopic, useAi } from '../ai/AiContext'
 
 export default function TaskDetail() {
   const { id = '' } = useParams()
@@ -15,6 +16,8 @@ export default function TaskDetail() {
   const [crit, setCrit] = useState('')
   const [comment, setComment] = useState('')
   const [confirmDel, setConfirmDel] = useState(false)
+  const ai = useAi()
+  useMentorTopic(t ? { title: t.title, summary: t.desc } : null)
   if (!t) return <Navigate to="/plan" replace />
 
   const track = t.trackId ? trackById(t.trackId) : undefined
@@ -77,6 +80,7 @@ export default function TaskDetail() {
               ))}
               {t.comments.length === 0 && <li className="text-sm text-dim">Запиши вопрос, который возник, или мысль на потом.</li>}
             </ul>
+            <button onClick={() => ai.openMentor(`Помоги разобраться с задачей «${t.title}». С чего начать?`)} className="btn-ghost !px-0 mt-3 text-xs text-violet-soft"><Icon name="smart_toy" className="text-[16px]" />Спросить наставника по задаче</button>
             <form onSubmit={(e) => { e.preventDefault(); if (comment.trim()) { s.addComment(t.id, comment.trim()); setComment('') } }} className="flex gap-2 mt-4">
               <input id="task-comment" className="input !py-2" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Вопрос или заметка…" />
               <button className="btn-secondary !px-3" aria-label="Отправить"><Icon name="send" className="text-[18px]" /></button>

@@ -1,0 +1,21 @@
+{
+  "scientific": [
+    {
+      "id": "wolfram",
+      "label": "Wolfram|Alpha",
+      "domain": "Математика и физика",
+      "url": "https://your-proxy.example.com/wolfram",
+      "tokenEnv": "WOLFRAM_TOKEN",
+      "description": "Символьная математика и физические константы: решает уравнения, берёт интегралы и производные, переводит единицы. Возвращает результат и шаги решения.",
+      "inputSchema": { "type": "object", "properties": { "query": { "type": "string" } }, "required": ["query"], "additionalProperties": false }
+    },
+    {
+      "id": "chem_predictor",
+      "label": "Химический предиктор (своя модель)",
+      "domain": "Химия",
+      "url": "http://localhost:9000/predict",
+      "description": "Предсказывает продукты реакции и её энергию по SMILES реагентов. Возвращает продукты и ΔH в кДж/моль.",
+      "inputSchema": { "type": "object", "properties": { "reactants": { "type": "array", "items": { "type": "string" } } }, "required": ["reactants"], "additionalProperties": false }
+    }
+  ]
+}

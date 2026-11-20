@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { lessonById, nodeById, trackById } from '../data'
 import { useStore } from '../store'
 import { Icon, Md, Ring } from '../components/ui'
+import { useMentorTopic } from '../ai/AiContext'
+import AiCardsButton from '../components/AiCardsButton'
 
 const AMBIENT = ['Тишина', 'Дождь', 'Белый шум', 'Кофейня', 'Lo-Fi']
 
@@ -48,6 +50,7 @@ export default function DeepStudy() {
     }
   }, [lesson, node])
   const nodeCards = s.allCards.filter((c) => c.nodeId === nodeId)
+  useMentorTopic({ title: node.title, summary: node.short, material: material.texts.join('\n') })
   const recall = nodeCards[cardIdx % Math.max(1, nodeCards.length)]
   const words = note.split(/\s+/).filter(Boolean).length
   const mm = String(Math.floor(left / 60)).padStart(2, '0')
@@ -135,6 +138,7 @@ export default function DeepStudy() {
             <textarea id="deep-note" className="input mt-3 min-h-[220px] !text-[13px] leading-6 font-mono" value={note} onChange={(e) => setNote(e.target.value)} onBlur={() => s.saveNote(nodeId, note)}
               placeholder={'## Главное\n- …\n\n## Своими словами\n…'} />
             <button onClick={() => { s.saveNote(nodeId, note); s.notify('Конспект сохранён в библиотеку') }} className="btn-secondary w-full mt-2 !py-2"><Icon name="save" className="text-[18px]" />Сохранить</button>
+            <AiCardsButton nodeId={nodeId} topic={node.title} text={note} />
           </div>
           <form className="card p-5 space-y-2" onSubmit={(e) => { e.preventDefault(); if (!cf.trim() || !cb.trim()) return; s.addUserCard({ front: cf.trim(), back: cb.trim(), trackId: track.id, nodeId }); setCf(''); setCb(''); s.notify('Карточка добавлена в колоду') }}>
             <div className="label text-violet-soft">Мысль → в карточку</div>

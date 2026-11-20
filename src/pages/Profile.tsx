@@ -105,6 +105,10 @@ export default function Profile() {
             </div>
             <Toggle label="Фоновый звук в Deep Study" hint="Включать выбранный фон при старте фокус-сессии" on={s.prefs.autoAmbient} set={(v) => s.setPrefs({ autoAmbient: v })} />
             <Toggle label="Напоминания о повторении" hint="Когда карточки созрели, а ты ещё не занимался сегодня" on={s.prefs.reminders} set={(v) => s.setPrefs({ reminders: v })} />
+            <Link to="/settings/ai" className="flex items-center justify-between rounded-lg border border-violet/30 bg-violet/5 p-3 hover:border-violet/60">
+              <span><span className="text-sm font-semibold block">ИИ-наставник</span><span className="text-xs text-dim">Подключение Claude, модели, научные инструменты, память</span></span>
+              <Icon name="chevron_right" className="text-dim" />
+            </Link>
             <Link to="/settings/fsrs" className="flex items-center justify-between rounded-lg border border-line p-3 hover:border-s3">
               <span><span className="text-sm font-semibold block">Интервальное повторение</span><span className="text-xs text-dim">Цель удержания {Math.round(s.srs.requestRetention * 100)}% · FSRS-6</span></span>
               <Icon name="chevron_right" className="text-dim" />
