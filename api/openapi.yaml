@@ -1,0 +1,410 @@
+openapi: 3.1.0
+info:
+  title: NextGenLearn API
+  version: 0.1.0
+  description: |
+    API платформы NGL: генерация треков под любую тему, граф понятий, уроки,
+    лаборатории, интервальное повторение FSRS-4.5, план и фокус.
+    Все эндпоинты требуют авторизации (Bearer JWT), кроме /health.
+    Время — ISO 8601 UTC. Дни плана — в часовом поясе пользователя.
+servers:
+  - url: /api/v1
+security:
+  - bearer: []
+
+paths:
+  /me:
+    get:
+      summary: Профиль, опыт, уровень и серия
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } } }
+
+  /tracks:
+    get:
+      summary: Мои треки
+      responses:
+        '200':
+          description: OK
+          content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/TrackSummary' } } } }
+    post:
+      summary: Собрать новый трек по запросу (асинхронно)
+      description: |
+        Запускает генерацию: граф понятий → уроки первых узлов → лаборатории → карточки.
+        Ответ приходит сразу; ход генерации — через GET /tracks/{id} или SSE /tracks/{id}/events.
+        Уроки дальних узлов генерируются лениво, когда узел открывается.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [request_text, level]
+              properties:
+                request_text: { type: string, minLength: 3, maxLength: 500, example: 'Сетевые протоколы с нуля' }
+                level: { $ref: '#/components/schemas/Level' }
+                goal: { type: string, example: 'Понять, как это работает' }
+                daily_minutes: { type: integer, minimum: 5, maximum: 480, example: 45 }
+      responses:
+        '202':
+          description: Генерация запущена
+          content: { application/json: { schema: { $ref: '#/components/schemas/TrackSummary' } } }
+        '422': { $ref: '#/components/responses/Invalid' }
+
+  /tracks/{trackId}:
+    parameters: [{ $ref: '#/components/parameters/trackId' }]
+    get:
+      summary: Трек и состояние генерации
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/TrackSummary' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /tracks/{trackId}/events:
+    parameters: [{ $ref: '#/components/parameters/trackId' }]
+    get:
+      summary: Поток шагов генерации (Server-Sent Events)
+      description: 'События: step {name, status}, done, error. Экран «Новая тема» рисует по ним прогресс.'
+      responses:
+        '200': { description: text/event-stream, content: { text/event-stream: { schema: { type: string } } } }
+
+  /tracks/{trackId}/graph:
+    parameters: [{ $ref: '#/components/parameters/trackId' }]
+    get:
+      summary: Граф понятий с прогрессом текущего пользователя
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [track, nodes, edges, progress_pct]
+                properties:
+                  track: { $ref: '#/components/schemas/TrackSummary' }
+                  nodes: { type: array, items: { $ref: '#/components/schemas/GraphNode' } }
+                  edges:
+                    type: array
+                    items: { type: object, required: [from, to], properties: { from: { type: string, format: uuid }, to: { type: string, format: uuid } } }
+                  progress_pct: { type: integer, minimum: 0, maximum: 100 }
+
+  /nodes/{nodeId}/lesson:
+    parameters: [{ $ref: '#/components/parameters/nodeId' }]
+    get:
+      summary: Урок узла (генерируется при первом запросе)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Lesson' } } } }
+        '202': { description: Урок ещё генерируется — повторить через retry_after секунд }
+        '403': { description: Узел закрыт — не пройдены предпосылки }
+
+  /lessons/{lessonId}/answers:
+    post:
+      summary: Ответ на интерактивный блок урока
+      description: |
+        Для quiz и order сервер проверяет ответ сам. Для feynman — ИИ-наставник оценивает
+        объяснение и возвращает отзыв. Правильные ответы клиенту заранее не отдаются.
+      parameters: [{ name: lessonId, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [block_index, answer]
+              properties:
+                block_index: { type: integer, minimum: 0 }
+                answer:
+                  description: 'quiz — {choice: 2}; order — {sequence: [..]}; feynman — {text: "..."}'
+                  type: object
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [correct]
+                properties:
+                  correct: { type: boolean }
+                  explanation: { type: string }
+                  feedback: { type: string, description: Отзыв ИИ-наставника }
+
+  /lessons/{lessonId}/complete:
+    post:
+      summary: Завершить урок — XP, карточки в колоду, открытие следующих узлов
+      parameters: [{ name: lessonId, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        content: { application/json: { schema: { type: object, properties: { note: { type: string, description: Конспект ученика } } } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  xp_awarded: { type: integer }
+                  cards_added: { type: integer }
+                  unlocked_node_ids: { type: array, items: { type: string, format: uuid } }
+        '409': { description: Не все обязательные блоки выполнены }
+
+  /labs/{labId}:
+    get:
+      summary: Конфиг лаборатории для движка-примитива
+      parameters: [{ $ref: '#/components/parameters/labId' }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Lab' } } } }
+
+  /labs/{labId}/attempts:
+    post:
+      summary: Отправить журнал действий в лаборатории
+      description: Сервер переигрывает действия на том же движке и сам решает, пройдена ли лаборатория. Клиентскому «passed» не доверяем.
+      parameters: [{ $ref: '#/components/parameters/labId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lab_version, actions, started_at]
+              properties:
+                lab_version: { type: integer }
+                started_at: { type: string, format: date-time }
+                actions:
+                  type: array
+                  items: { type: object, required: [type], properties: { type: { type: string, example: SEND_ACK }, payload: { type: object } } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [passed, mistakes, xp_awarded]
+                properties:
+                  passed: { type: boolean }
+                  mistakes: { type: integer }
+                  xp_awarded: { type: integer }
+                  missions: { type: array, items: { type: object, properties: { id: { type: string }, done: { type: boolean } } } }
+
+  /reviews/queue:
+    get:
+      summary: Карточки к повторению сейчас
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 200 } }
+        - { name: track_id, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Сначала самые «просроченные» (наименьшая текущая R)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  due_count: { type: integer }
+                  cards: { type: array, items: { $ref: '#/components/schemas/ReviewCard' } }
+
+  /reviews:
+    post:
+      summary: Оценить карточку (FSRS-4.5)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [card_id, grade]
+              properties:
+                card_id: { type: string, format: uuid }
+                grade: { type: integer, enum: [1, 2, 3, 4], description: '1 Снова, 2 Трудно, 3 Хорошо, 4 Легко' }
+                duration_ms: { type: integer, minimum: 0 }
+                reviewed_at: { type: string, format: date-time, description: Для офлайн-повторений; по умолчанию — время сервера }
+      responses:
+        '200': { description: Новое состояние карточки, content: { application/json: { schema: { $ref: '#/components/schemas/CardState' } } } }
+
+  /reviews/forecast:
+    get:
+      summary: Сколько карточек придётся повторять по дням
+      parameters: [{ name: days, in: query, schema: { type: integer, default: 7, maximum: 90 } }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { type: object, properties: { date: { type: string, format: date }, count: { type: integer } } } }
+
+  /plan:
+    get:
+      summary: План на день (собирается автоматически, если его ещё нет)
+      parameters: [{ name: date, in: query, schema: { type: string, format: date } }]
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/PlanItem' } } } } }
+
+  /plan/items/{itemId}:
+    patch:
+      summary: Отметить пункт плана выполненным или перенести
+      parameters: [{ name: itemId, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        content: { application/json: { schema: { type: object, properties: { done: { type: boolean }, plan_date: { type: string, format: date }, starts_at: { type: string, example: '18:30' } } } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PlanItem' } } } }
+
+  /focus-sessions:
+    post:
+      summary: Записать фокус-сессию
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [planned_min, started_at]
+              properties:
+                planned_min: { type: integer, enum: [25, 50] }
+                actual_min: { type: integer }
+                started_at: { type: string, format: date-time }
+                ended_at: { type: string, format: date-time }
+                plan_item_id: { type: string, format: uuid }
+                parked_thoughts: { type: array, items: { type: string } }
+      responses:
+        '201': { description: Создано }
+
+  /health:
+    get:
+      security: []
+      summary: Проверка живости
+      responses:
+        '200': { description: OK }
+
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer, bearerFormat: JWT }
+
+  parameters:
+    trackId: { name: trackId, in: path, required: true, schema: { type: string, format: uuid } }
+    nodeId: { name: nodeId, in: path, required: true, schema: { type: string, format: uuid } }
+    labId: { name: labId, in: path, required: true, schema: { type: string, format: uuid } }
+
+  responses:
+    NotFound: { description: Не найдено, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    Invalid: { description: Ошибка валидации, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string, example: node_locked }
+        message: { type: string, example: 'Сначала пройдите «IP-адреса»' }
+
+    Level: { type: string, enum: [zero, some, pro] }
+
+    Me:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        display_name: { type: string }
+        xp: { type: integer }
+        level: { type: integer, description: 'Вычисляется из xp' }
+        streak_days: { type: integer, description: 'Дни подряд с хотя бы одним действием, в часовом поясе пользователя' }
+        daily_minutes: { type: integer }
+        focus_minutes_today: { type: integer }
+
+    TrackSummary:
+      type: object
+      required: [id, title, status]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        subtitle: { type: string }
+        domain: { type: string }
+        level: { $ref: '#/components/schemas/Level' }
+        status: { type: string, enum: [generating, ready, failed, archived] }
+        node_count: { type: integer }
+        progress_pct: { type: integer }
+
+    GraphNode:
+      type: object
+      required: [id, title, tier, status]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        title: { type: string }
+        summary: { type: string }
+        tier: { type: integer, minimum: 0, maximum: 4 }
+        x: { type: number }
+        y: { type: number }
+        est_minutes: { type: integer }
+        xp_reward: { type: integer }
+        status: { type: string, enum: [locked, available, done] }
+        mastery_pct: { type: integer, description: 'урок 70% + лаборатория 30%, умноженные на среднюю R карточек узла' }
+        lab_id: { type: [string, 'null'], format: uuid }
+
+    Lesson:
+      type: object
+      required: [id, node_id, version, title, blocks]
+      properties:
+        id: { type: string, format: uuid }
+        node_id: { type: string, format: uuid }
+        version: { type: integer }
+        title: { type: string }
+        blocks: { type: array, items: { $ref: '#/components/schemas/LessonBlock' } }
+
+    LessonBlock:
+      description: Примитивы урока. Правильные ответы в ответе API не передаются.
+      oneOf:
+        - { type: object, required: [type, md], properties: { type: { const: text }, md: { type: string } } }
+        - { type: object, required: [type, title, md], properties: { type: { const: analogy }, title: { type: string }, md: { type: string } } }
+        - { type: object, required: [type, q, options], properties: { type: { const: quiz }, q: { type: string }, options: { type: array, items: { type: string }, minItems: 2, maxItems: 6 } } }
+        - { type: object, required: [type, q, items], properties: { type: { const: order }, q: { type: string }, items: { type: array, items: { type: string }, description: Перемешаны сервером } } }
+        - { type: object, required: [type, prompt], properties: { type: { const: feynman }, prompt: { type: string } } }
+        - { type: object, required: [type, items], properties: { type: { const: terms }, items: { type: array, items: { type: object, properties: { term: { type: string }, def: { type: string } } } } } }
+        - { type: object, required: [type, widget, config], properties: { type: { const: widget }, widget: { type: string, example: layer_stack }, config: { type: object } } }
+
+    Lab:
+      type: object
+      required: [id, primitive, title, config, version]
+      properties:
+        id: { type: string, format: uuid }
+        node_id: { type: string, format: uuid }
+        primitive: { type: string, enum: [stepper, param_explorer, builder, scenario, code_sandbox, roleplay] }
+        title: { type: string }
+        version: { type: integer }
+        xp_reward: { type: integer }
+        config: { type: object, description: 'Состояния, действия, задания и подсказки — формат зависит от primitive' }
+
+    ReviewCard:
+      type: object
+      properties:
+        card_id: { type: string, format: uuid }
+        node_title: { type: string }
+        front: { type: string }
+        back: { type: string }
+        state: { $ref: '#/components/schemas/CardState' }
+        preview:
+          type: object
+          description: 'Через сколько дней карточка вернётся при каждой оценке (0 = в этой же сессии)'
+          properties: { '1': { type: number }, '2': { type: number }, '3': { type: number }, '4': { type: number } }
+
+    CardState:
+      type: object
+      required: [stability, difficulty, status, due_at]
+      properties:
+        stability: { type: number, description: 'S, дни' }
+        difficulty: { type: number, description: 'D, 1..10' }
+        retrievability: { type: number, description: 'R на момент ответа, 0..1' }
+        status: { type: string, enum: [new, learning, review, relearning] }
+        reps: { type: integer }
+        lapses: { type: integer }
+        interval_days: { type: number }
+        due_at: { type: string, format: date-time }
+
+    PlanItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        plan_date: { type: string, format: date }
+        starts_at: { type: string, example: '12:00' }
+        kind: { type: string, enum: [review, lesson, lab, focus] }
+        ref_id: { type: [string, 'null'], format: uuid }
+        title: { type: string }
+        minutes: { type: integer }
+        done: { type: boolean }

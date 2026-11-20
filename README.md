@@ -9,6 +9,7 @@
 ```bash
 npm install
 npm run dev
+npm test
 ```
 
 ## Структура
@@ -16,6 +17,10 @@ npm run dev
 - `src/data/networks.ts` — контент трека (граф, уроки, карточки). В будущем его будет генерировать ИИ.
 - `src/components/blocks.tsx` — «примитивы» уроков: аналогия, вопрос, упорядочивание, «объясни сам», словарик.
 - `src/pages/` — экраны: Сегодня, Новая тема, Древо, Урок, Лаборатории (TCP, подсети, инкапсуляция), Повторение, План и фокус.
-- `src/store.tsx` — прогресс пользователя и упрощённый FSRS (в прототипе хранится в localStorage).
+- `src/lib/fsrs.ts` — алгоритм повторения FSRS-4.5 (общий для фронтенда и будущего бэкенда), тесты в `tests/`.
+- `src/store.tsx` — прогресс пользователя (в прототипе хранится в localStorage).
+- `db/schema.sql` — схема PostgreSQL 16 для бэкенда.
+- `api/openapi.yaml` — контракт REST API.
+- `docs/backend-brief.md` — бриф для ИИ, который будет писать бэкенд.
 
 Стек: Vite + React + TypeScript + Tailwind. Дизайн — тёмная тема Nocturne Mastery из макетов Stitch.

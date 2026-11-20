@@ -1,35 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { CARDS, NODES, STARTER_CARDS, nodeById } from './data/networks'
 
-// ---------------------------------------------------------------------------
-// Упрощённый FSRS: стабильность S (дни) и сложность D (1..10).
-// При целевом удержании 90% следующий интервал ≈ S.
-// ---------------------------------------------------------------------------
+import { newCard, review, type FsrsCard, type Grade } from './lib/fsrs'
 
-export type Rating = 1 | 2 | 3 | 4 // Снова, Трудно, Хорошо, Легко
-export interface CardState { s: number; d: number; due: number; reps: number; lapses: number }
-
+export type Rating = Grade // 1 Снова, 2 Трудно, 3 Хорошо, 4 Легко
+export type CardState = FsrsCard
 const DAY = 86_400_000
-const W_INIT = [0.4, 1.2, 3.2, 15.7] // начальная стабильность для 4 оценок
-
-function clamp(v: number, a: number, b: number) { return Math.min(b, Math.max(a, v)) }
-
-export function scheduleCard(c: CardState | undefined, r: Rating, now: number): CardState {
-  if (!c || c.reps === 0) {
-    const s = W_INIT[r - 1]
-    const d = clamp(5 - (r - 3) * 1.5, 1, 10)
-    return { s, d, due: now + (r === 1 ? 60_000 : s * DAY), reps: 1, lapses: r === 1 ? 1 : 0 }
-  }
-  const d = clamp(c.d - (r - 3) * 0.8, 1, 10)
-  if (r === 1) {
-    const s = Math.max(0.3, c.s * 0.25)
-    return { s, d, due: now + 60_000, reps: c.reps + 1, lapses: c.lapses + 1 }
-  }
-  const growth = Math.exp(1.5) * (11 - d) * Math.pow(c.s, -0.15) * (Math.exp(0.25) - 1)
-  const mod = r === 2 ? 0.45 : r === 4 ? 1.6 : 1
-  const s = c.s * (1 + growth * mod)
-  return { s, d, due: now + s * DAY, reps: c.reps + 1, lapses: c.lapses }
-}
 
 export function formatInterval(ms: number) {
   if (ms < 3_600_000) return `${Math.max(1, Math.round(ms / 60_000))} мин`
@@ -59,14 +35,15 @@ interface State {
   planDone: string[]
 }
 
-const KEY = 'ngl-state-v1'
+const KEY = 'ngl-state-v2'
 
 function initialState(): State {
   const now = Date.now()
   const cards: Record<string, CardState> = {}
   STARTER_CARDS.forEach((id, i) => {
     // часть карточек «созрела» к повторению сегодня
-    cards[id] = { s: 2 + i, d: 5, due: now - (i + 1) * 3_600_000, reps: 2, lapses: 0 }
+    const stability = 2 + i
+    cards[id] = { stability, difficulty: 5, status: 'review', reps: 2, lapses: 0, lastReview: now - stability * DAY - (i + 1) * 3_600_000, due: now - (i + 1) * 3_600_000 }
   })
   return {
     name: 'Алексей',
@@ -163,13 +140,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addXp: (n) => setState((s) => ({ ...s, xp: s.xp + n })),
       rate: (cardId, r) => setState((s) => ({
         ...s,
-        cards: { ...s.cards, [cardId]: scheduleCard(s.cards[cardId], r, Date.now()) },
+        cards: { ...s.cards, [cardId]: review(s.cards[cardId] ?? newCard(Date.now()), r, Date.now()).card },
         reviewsToday: s.reviewsToday + 1,
         xp: s.xp + 5,
       })),
       addCards: (ids) => setState((s) => {
         const cards = { ...s.cards }
-        ids.forEach((id) => { if (!cards[id]) cards[id] = { s: 0, d: 5, due: Date.now(), reps: 0, lapses: 0 } })
+        ids.forEach((id) => { if (!cards[id]) cards[id] = newCard(Date.now()) })
         return { ...s, cards }
       }),
       dueCards: () => Object.entries(state.cards)

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CARDS, nodeById } from '../data/networks'
-import { formatInterval, scheduleCard, useStore, type Rating } from '../store'
+import { formatInterval, useStore, type Rating } from '../store'
+import { newCard, review } from '../lib/fsrs'
 import { Icon, PageHeader } from '../components/ui'
 
 const RATINGS: { r: Rating; label: string; cls: string; key: string }[] = [
@@ -79,7 +80,7 @@ export default function Review() {
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pop">
                   {RATINGS.map((x) => {
-                    const next = scheduleCard(s.cards[cardId], x.r, Date.now())
+                    const next = review(s.cards[cardId] ?? newCard(Date.now()), x.r, Date.now()).card
                     return (
                       <button key={x.r} onClick={() => rate(x.r)} className={`rounded-lg border py-2.5 transition-colors ${x.cls}`}>
                         <div className="font-semibold text-sm">{x.label}</div>
@@ -133,7 +134,7 @@ export default function Review() {
           </div>
           <div className="card p-4 text-sm text-mute">
             <div className="label mb-2">Как это работает</div>
-            Каждая карточка хранит <b className="text-ink">стабильность</b> (сколько дней ты её помнишь) и <b className="text-ink">сложность</b>. Чем легче вспомнил — тем дальше следующий показ.
+            Алгоритм FSRS-4.5. Каждая карточка хранит <b className="text-ink">стабильность</b> (сколько дней ты её помнишь) и <b className="text-ink">сложность</b>. Чем легче вспомнил — тем дальше следующий показ.
           </div>
         </aside>
       </div>
