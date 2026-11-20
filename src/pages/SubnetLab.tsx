@@ -43,7 +43,7 @@ export default function SubnetLab() {
       const next = [...solved, task]
       setSolved(next)
       setFb({ ok: true, msg: `Точно! /${prefix}: ${hostBits} бит на устройства → 2^${hostBits} − 2 = ${usable} адресов. Минимально и с запасом.` })
-      if (next.length === TASKS.length) s.completeLab('subnet', 'subnets', Math.max(60, 140 - mistakes * 10))
+      if (next.length === TASKS.length) s.completeLab('subnet', 'subnets', Math.max(60, 140 - mistakes * 10), mistakes)
     }
   }
 
@@ -136,7 +136,7 @@ export default function SubnetLab() {
               <Icon name="verified" fill className="text-teal-soft text-[32px]" />
               <div className="font-bold mt-1">Все отделы подключены!</div>
               <div className="text-sm text-mute">Ошибок: {mistakes}</div>
-              <Link to="/track" className="btn-teal w-full mt-3">К древу знаний</Link>
+              <Link to="/track/networks" className="btn-teal w-full mt-3">К древу знаний</Link>
             </div>
           )}
         </aside>

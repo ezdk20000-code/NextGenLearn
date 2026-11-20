@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { CARDS, LESSONS, nodeById, type LessonBlock } from '../data/networks'
+import { lessonById, nodeById, trackOfNode, type LessonBlock } from '../data'
 import { useStore } from '../store'
 import { Bar, Icon, Md } from '../components/ui'
 import { AnalogyBlock, FeynmanBlock, LayersBlock, OrderBlock, QuizBlock, TermsBlock } from '../components/blocks'
@@ -11,7 +11,8 @@ export default function LessonPage() {
   const { id = '' } = useParams()
   const s = useStore()
   const node = nodeById(id)
-  const lesson = LESSONS[id]
+  const lesson = lessonById(id)
+  const track = trackOfNode(id)
   const [shown, setShown] = useState(1)
   const [solved, setSolved] = useState<Record<number, boolean>>({})
   const [firstTry, setFirstTry] = useState(0)
@@ -33,7 +34,7 @@ export default function LessonPage() {
   const actionCount = blocks.filter(needsAction).length
 
   const finish = () => {
-    s.completeLesson(id)
+    s.completeLesson(id, { firstTry, total: actionCount })
     s.addCards(lesson.cardIds)
     s.saveNote(id, note)
     setFinished(true)
@@ -43,7 +44,7 @@ export default function LessonPage() {
     <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
       <article className="min-w-0">
         <div className="flex items-center gap-2 text-xs text-dim mb-3">
-          <Link to="/track" className="hover:text-ink flex items-center gap-1"><Icon name="arrow_back" className="text-[16px]" />Древо</Link>
+          <Link to={`/track/${track?.id ?? ''}`} className="hover:text-ink flex items-center gap-1"><Icon name="arrow_back" className="text-[16px]" />{track?.title ?? 'Древо'}</Link>
           <span>/</span><span>{node.title}</span>
         </div>
         <div className="label text-teal-soft">Урок · {node.minutes} мин · +{node.xp} XP</div>
@@ -55,10 +56,10 @@ export default function LessonPage() {
             <div key={i} className="pop">
               {b.type === 'text' && <p className="text-[16px] leading-[1.75] text-ink/90"><Md text={b.md} /></p>}
               {b.type === 'analogy' && <AnalogyBlock title={b.title} md={b.md} />}
-              {b.type === 'layers' && <LayersBlock />}
+              {b.type === 'widget' && b.widget === 'layers' && <LayersBlock />}
               {b.type === 'quiz' && <QuizBlock {...b} onDone={(ok) => { setSolved((x) => ({ ...x, [i]: true })); if (ok) setFirstTry((n) => n + 1) }} />}
               {b.type === 'order' && <OrderBlock {...b} onDone={() => { setSolved((x) => ({ ...x, [i]: true })); setFirstTry((n) => n + 1) }} />}
-              {b.type === 'feynman' && <FeynmanBlock {...b} onDone={() => { setSolved((x) => ({ ...x, [i]: true })); setFirstTry((n) => n + 1); setNote((n) => n || 'Моё объяснение сохранено из урока.') }} />}
+              {b.type === 'feynman' && <FeynmanBlock {...b} onDone={(text) => { setSolved((x) => ({ ...x, [i]: true })); setFirstTry((n) => n + 1); setNote((n) => (n ? n + '\n\n' : '') + `Своими словами: ${text}`) }} />}
               {b.type === 'terms' && <TermsBlock items={b.items} />}
             </div>
           ))}
@@ -84,7 +85,7 @@ export default function LessonPage() {
               </div>
               <div className="flex flex-col sm:flex-row gap-2 justify-center mt-6">
                 {node.lab && <Link to={`/lab/${node.lab}`} className="btn-primary"><Icon name="science" className="text-[18px]" />Закрепить в лаборатории</Link>}
-                <Link to="/track" className="btn-secondary"><Icon name="hub" className="text-[18px]" />Что открылось в древе</Link>
+                <Link to={`/track/${track?.id ?? ''}`} className="btn-secondary"><Icon name="hub" className="text-[18px]" />Что открылось в древе</Link>
               </div>
             </div>
           )}
@@ -98,7 +99,7 @@ export default function LessonPage() {
           <ol className="space-y-2">
             {blocks.map((b, i) => {
               const state = i < shown - 1 || finished ? 'done' : i === shown - 1 ? 'now' : 'next'
-              const label = b.type === 'text' ? 'Объяснение' : b.type === 'analogy' ? 'Аналогия' : b.type === 'layers' ? 'Интерактивная схема' : b.type === 'quiz' ? 'Вопрос' : b.type === 'order' ? 'Упорядочивание' : b.type === 'feynman' ? 'Объясни сам' : 'Словарик'
+              const label = b.type === 'text' ? 'Объяснение' : b.type === 'analogy' ? 'Аналогия' : b.type === 'widget' ? 'Интерактивная схема' : b.type === 'quiz' ? 'Вопрос' : b.type === 'order' ? 'Упорядочивание' : b.type === 'feynman' ? 'Объясни сам' : 'Словарик'
               return (
                 <li key={i} className={`flex items-center gap-2 text-sm ${state === 'next' ? 'text-dim' : state === 'now' ? 'text-ink font-semibold' : 'text-mute'}`}>
                   <Icon name={state === 'done' ? 'check_circle' : state === 'now' ? 'radio_button_checked' : 'radio_button_unchecked'} fill={state === 'done'}
@@ -116,7 +117,7 @@ export default function LessonPage() {
         <div className="card p-4">
           <div className="label mb-2">Карточки этого урока</div>
           <ul className="space-y-1.5 text-sm text-mute">
-            {lesson.cardIds.map((c) => <li key={c} className="flex gap-2"><Icon name="style" className="text-[16px] text-amber-soft mt-0.5" />{CARDS.find((x) => x.id === c)?.front}</li>)}
+            {lesson.cardIds.map((c) => <li key={c} className="flex gap-2"><Icon name="style" className="text-[16px] text-amber-soft mt-0.5" />{s.cardDef(c)?.front}</li>)}
           </ul>
         </div>
       </aside>
@@ -131,7 +132,7 @@ function DraftLesson({ id }: { id: string }) {
   const st = s.status(id)
   return (
     <div className="max-w-2xl mx-auto">
-      <Link to="/track" className="text-xs text-dim hover:text-ink flex items-center gap-1 mb-3"><Icon name="arrow_back" className="text-[16px]" />Древо</Link>
+      <Link to={`/track/${trackOfNode(id)?.id ?? ''}`} className="text-xs text-dim hover:text-ink flex items-center gap-1 mb-3"><Icon name="arrow_back" className="text-[16px]" />{trackOfNode(id)?.title ?? 'Древо'}</Link>
       <div className="label text-amber-soft">Черновик урока</div>
       <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight mt-2">{node.title}</h1>
       <p className="text-mute mt-2">{node.short}</p>
@@ -140,7 +141,7 @@ function DraftLesson({ id }: { id: string }) {
           <Icon name="auto_awesome" className="text-violet-soft text-[24px]" />
           <div>
             <div className="font-semibold">Этот урок в прототипе ещё не нарисован</div>
-            <p className="text-sm text-mute mt-1">В рабочей версии ИИ соберёт его из тех же блоков: объяснение → аналогия → интерактив → проверки → «объясни сам» → карточки. Полностью готовы уроки «Что такое сеть», «Модель TCP/IP» и «TCP».</p>
+            <p className="text-sm text-mute mt-1">В рабочей версии ИИ соберёт его из тех же блоков: объяснение → аналогия → интерактив → проверки → «объясни сам» → карточки. Полностью готовые уроки отмечены в древе знаний без пометки «черновик».</p>
           </div>
         </div>
         {st === 'locked' ? (

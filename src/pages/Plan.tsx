@@ -28,7 +28,6 @@ export default function Plan() {
     if (left === 0 && run) {
       setRun(false)
       s.addFocus(len)
-      s.addXp(20)
       s.notify(`Фокус-сессия ${len} мин завершена · +20 XP`)
       setLeft(len * 60)
     }

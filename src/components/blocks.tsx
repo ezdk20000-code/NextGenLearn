@@ -138,7 +138,7 @@ export function OrderBlock({ q, items, explain, onDone }: { q: string; items: st
   )
 }
 
-export function FeynmanBlock({ prompt, keywords, onDone }: { prompt: string; keywords: string[]; onDone: () => void }) {
+export function FeynmanBlock({ prompt, keywords, onDone }: { prompt: string; keywords: string[]; onDone: (text: string) => void }) {
   const [text, setText] = useState('')
   const [fb, setFb] = useState<null | { ok: boolean; msg: string }>(null)
   const check = () => {
@@ -146,7 +146,7 @@ export function FeynmanBlock({ prompt, keywords, onDone }: { prompt: string; key
     const hits = keywords.filter((k) => lower.includes(k)).length
     if (text.trim().length < 30) setFb({ ok: false, msg: 'Слишком коротко. Попробуй 2–3 предложения, как будто объясняешь другу.' })
     else if (hits === 0) setFb({ ok: false, msg: 'Хорошая попытка, но не хватает ключевой идеи. Подсказка: вспомни аналогию из урока.' })
-    else { setFb({ ok: true, msg: 'Отличное объяснение — ты уловил главную идею. Я добавил его в твой конспект.' }); onDone() }
+    else { setFb({ ok: true, msg: 'Отличное объяснение — ты уловил главную идею. Я добавил его в твой конспект.' }); onDone(text.trim()) }
   }
   return (
     <div className="rounded-lg border border-line bg-s1 p-4 md:p-5">

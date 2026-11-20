@@ -2,31 +2,9 @@
 // В будущем этот файл будет генерировать ИИ из запроса пользователя —
 // поэтому весь контент описан данными, а не зашит в вёрстку.
 
-export type Tier = 0 | 1 | 2 | 3 | 4
-export const TIER_NAMES = ['Корень', 'Основа', 'Ветвь', 'Крона', 'Вершина'] as const
+import type { CardDef, GraphNode, LabDef, Lesson, Track } from './types'
 
-export interface GraphNode {
-  id: string
-  title: string
-  short: string
-  tier: Tier
-  x: number // позиция на карте, 0..1000
-  y: number // 0..640
-  requires: string[]
-  minutes: number
-  xp: number
-  lab?: string // id лаборатории
-}
-
-export const TRACK = {
-  id: 'networks',
-  title: 'Сетевые протоколы с нуля',
-  subtitle: 'Как устроен интернет: от бита в проводе до HTTPS в браузере',
-  domain: 'Компьютерные сети',
-  totalHours: 14,
-}
-
-export const NODES: GraphNode[] = [
+const NODES: GraphNode[] = [
   { id: 'what-is-network', title: 'Что такое сеть', short: 'Устройства, каналы связи и зачем им договариваться о правилах.', tier: 0, x: 500, y: 590, requires: [], minutes: 10, xp: 60 },
   { id: 'packets', title: 'Биты, кадры, пакеты', short: 'Почему данные режут на кусочки и подписывают каждый.', tier: 1, x: 330, y: 480, requires: ['what-is-network'], minutes: 12, xp: 80 },
   { id: 'layers', title: 'Модель TCP/IP', short: 'Четыре слоя, у каждого своя работа. Инкапсуляция.', tier: 1, x: 670, y: 480, requires: ['what-is-network'], minutes: 15, xp: 100, lab: 'encap' },
@@ -42,30 +20,8 @@ export const NODES: GraphNode[] = [
   { id: 'tls', title: 'TLS и HTTPS', short: 'Шифрование и проверка, что сервер — тот, за кого себя выдаёт.', tier: 4, x: 740, y: 90, requires: ['http'], minutes: 20, xp: 160 },
 ]
 
-export const nodeById = (id: string) => NODES.find((n) => n.id === id)
 
-// ---------------------------------------------------------------------------
-// Уроки: последовательность блоков. Каждый тип блока = переиспользуемый
-// «примитив», из которых ИИ будет собирать уроки по любой теме.
-// ---------------------------------------------------------------------------
-
-export type LessonBlock =
-  | { type: 'text'; md: string }
-  | { type: 'analogy'; title: string; md: string }
-  | { type: 'layers' } // интерактивная схема слоёв
-  | { type: 'quiz'; q: string; options: string[]; correct: number; explain: string }
-  | { type: 'order'; q: string; items: string[]; explain: string } // расставить по порядку (items в правильном порядке)
-  | { type: 'feynman'; prompt: string; keywords: string[] }
-  | { type: 'terms'; items: { term: string; def: string }[] }
-
-export interface Lesson {
-  nodeId: string
-  title: string
-  blocks: LessonBlock[]
-  cardIds: string[]
-}
-
-export const LESSONS: Record<string, Lesson> = {
+const LESSONS: Record<string, Lesson> = {
   'what-is-network': {
     nodeId: 'what-is-network',
     title: 'Что такое сеть и зачем нужны протоколы',
@@ -84,7 +40,7 @@ export const LESSONS: Record<string, Lesson> = {
     cardIds: ['c-layers', 'c-encap', 'c-transport', 'c-link'],
     blocks: [
       { type: 'text', md: 'Отправить данные через интернет — огромная задача. Поэтому её **разбили на слои**. Каждый слой решает одну проблему и доверяет остальное соседям. Это как конвейер: каждый работник делает свою операцию и передаёт дальше.' },
-      { type: 'layers' },
+      { type: 'widget', widget: 'layers' },
       { type: 'analogy', title: 'Аналогия: матрёшка', md: 'Когда твой браузер отправляет запрос, каждый слой **заворачивает** данные верхнего слоя в свой «конверт» с заголовком. Получатель разворачивает конверты в обратном порядке. Это называется **инкапсуляция**.' },
       { type: 'quiz', q: 'Какой слой отвечает за то, чтобы данные дошли до нужного приложения (например, до браузера, а не до игры)?', options: ['Канальный', 'Сетевой (IP)', 'Транспортный (TCP/UDP)', 'Прикладной'], correct: 2, explain: 'Транспортный слой использует **порты**, чтобы различать приложения на одном компьютере. IP доставляет до компьютера, а порт — до программы.' },
       { type: 'order', q: 'Расставь «конверты» от внешнего к внутреннему — как пакет выглядит в проводе:', items: ['Ethernet-заголовок', 'IP-заголовок', 'TCP-заголовок', 'HTTP-запрос'], explain: 'Снаружи — канальный слой (Ethernet), внутри него IP, внутри IP — TCP, и в самой середине — данные приложения.' },
@@ -117,9 +73,7 @@ export const LESSONS: Record<string, Lesson> = {
 // Карточки для интервального повторения
 // ---------------------------------------------------------------------------
 
-export interface CardDef { id: string; nodeId: string; front: string; back: string }
-
-export const CARDS: CardDef[] = [
+const CARDS: CardDef[] = ([
   { id: 'c-network', nodeId: 'what-is-network', front: 'Почему интернет называют «сетью сетей»?', back: 'Он состоит из миллионов отдельных сетей (домашних, офисных, провайдерских), соединённых между собой роутерами.' },
   { id: 'c-protocol', nodeId: 'what-is-network', front: 'Что такое протокол?', back: 'Набор правил: формат сообщений, порядок обмена и реакция на ошибки.' },
   { id: 'c-layers', nodeId: 'layers', front: 'Назови 4 слоя модели TCP/IP сверху вниз', back: 'Прикладной → Транспортный → Сетевой (Интернет) → Канальный' },
@@ -132,10 +86,40 @@ export const CARDS: CardDef[] = [
   { id: 'c-mask', nodeId: 'subnets', front: 'Сколько адресов для устройств в подсети /24?', back: '2⁸ − 2 = 254 (минус адрес сети и широковещательный).' },
   { id: 'c-cidr', nodeId: 'subnets', front: 'Что означает /26 в записи 192.168.1.0/26?', back: 'Первые 26 бит — адрес сети, оставшиеся 6 бит — устройства (62 хоста).' },
   { id: 'c-private', nodeId: 'ip', front: 'Назови диапазоны частных IPv4-адресов', back: '10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16' },
-]
+] as Omit<CardDef, 'trackId'>[]).map((c) => ({ ...c, trackId: 'networks' }))
 
 // Колода, уже «накопленная» к началу демо, чтобы экран повторения не был пустым
 export const STARTER_CARDS = ['c-network', 'c-protocol', 'c-private', 'c-mask', 'c-cidr']
+
+const LABS: LabDef[] = [
+  { id: 'encap', nodeId: 'layers', icon: 'deployed_code', title: 'Матрёшка пакета', desc: 'Собери пакет из заголовков и выясни, что меняет роутер по пути.', skills: ['инкапсуляция', 'MAC vs IP', 'TTL'], minutes: 8, primitive: 'Конструктор' },
+  { id: 'tcp', nodeId: 'tcp', icon: 'handshake', title: 'TCP: рукопожатие и потери', desc: 'Управляй клиентом: установи соединение, переживи потерю пакета, закрой сессию.', skills: ['SYN/ACK/FIN', 'seq и ack', 'повторная передача'], minutes: 12, primitive: 'Пошаговый симулятор' },
+  { id: 'subnet', nodeId: 'subnets', icon: 'grid_view', title: 'Нарезка подсетей', desc: 'Раздели адресное пространство между отделами компании без потерь.', skills: ['маски', 'CIDR', 'двоичная запись'], minutes: 10, primitive: 'Ползунки и визуализация' },
+]
+
+export const NETWORKS: Track = {
+  id: 'networks',
+  title: 'Сетевые протоколы с нуля',
+  subtitle: 'Как устроен интернет: от бита в проводе до HTTPS в браузере',
+  description: 'Модель TCP/IP, адресация, подсети, маршрутизация, TCP и UDP, DNS, HTTP и TLS. Каждое понятие — через аналогию, проверку и живой симулятор.',
+  category: 'CS и сети',
+  level: 'Фундамент',
+  weeks: 3,
+  hours: 14,
+  formats: ['Симуляции', 'Флеш-спринты'],
+  tags: ['TCP/IP', 'Подсети', 'HTTP'],
+  outcomes: [
+    'Объяснишь, что происходит между вводом адреса в браузере и открытием страницы',
+    'Будешь уверенно читать IP-адреса, маски и делить сеть на подсети',
+    'Поймёшь, как TCP добивается надёжности и чем от него отличается UDP',
+  ],
+  cover: { from: '#4F46E5', to: '#0D9488', icon: 'lan' },
+  playable: true,
+  nodes: NODES,
+  lessons: LESSONS,
+  cards: CARDS,
+  labs: LABS,
+}
 
 // Слои для интерактивной схемы
 export const LAYERS = [

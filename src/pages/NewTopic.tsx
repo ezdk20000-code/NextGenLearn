@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Icon, PageHeader } from '../components/ui'
-import { NODES, TRACK } from '../data/networks'
+import { TRACKS, trackById } from '../data'
 
 const LEVELS = [
   { id: 'zero', label: 'С нуля', hint: 'Никогда не сталкивался' },
@@ -34,12 +34,17 @@ export default function NewTopic() {
     return () => window.clearTimeout(t)
   }, [phase, step])
 
-  const isDemo = /сет|протокол|network|tcp|интернет/i.test(topic)
+  // В прототипе генерации нет: подбираем ближайший трек каталога по словам запроса
+  const words = topic.toLowerCase().split(/[^a-zа-яё0-9]+/i).filter((w) => w.length > 3).map((w) => w.slice(0, 5))
+  const match = TRACKS.map((t) => ({ t, score: words.filter((w) => `${t.title} ${t.subtitle} ${t.tags.join(' ')} ${t.category}`.toLowerCase().includes(w)).length }))
+    .sort((a, b) => b.score - a.score)[0]
+  const TRACK = match && match.score > 0 ? match.t : trackById('networks')!
+  const isDemo = !!match && match.score > 0
 
   if (phase === 'form') {
     return (
       <div className="max-w-3xl mx-auto">
-        <PageHeader eyebrow="Новая программа обучения" title="Чему ты хочешь научиться?"
+        <PageHeader eyebrow="Индивидуальная программа" title="Чему ты хочешь научиться?"
           sub="Любая тема — от квантовой физики до переговоров. Чем точнее опишешь цель, тем точнее будет программа." />
         <form className="card p-5 md:p-6 space-y-6" onSubmit={(e) => { e.preventDefault(); setStep(0); setPhase('gen') }}>
           <div>
@@ -80,7 +85,7 @@ export default function NewTopic() {
   return (
     <div className="max-w-3xl mx-auto">
       <PageHeader eyebrow={phase === 'gen' ? 'Генерация программы…' : 'Программа готова'} title={isDemo ? TRACK.title : topic}
-        sub={isDemo ? TRACK.subtitle : 'В прототипе полностью собран только демо-трек про сетевые протоколы — откроем его.'} />
+        sub={isDemo ? `Ближайшая программа в каталоге: ${TRACK.subtitle.toLowerCase()}` : 'Генерация новых программ появится вместе с ИИ-бэкендом. Пока покажем похожий трек из каталога.'} />
       <div className="card p-5 md:p-6">
         <ol className="space-y-1">
           {STEPS.map((st, i) => {
@@ -101,11 +106,13 @@ export default function NewTopic() {
         {phase === 'done' && (
           <div className="pop mt-6 border-t border-line pt-6">
             <div className="grid grid-cols-3 gap-3 text-center">
-              <div><div className="text-2xl font-bold">{NODES.length}</div><div className="text-xs text-dim">понятий</div></div>
-              <div><div className="text-2xl font-bold">3</div><div className="text-xs text-dim">лаборатории</div></div>
-              <div><div className="text-2xl font-bold">~{TRACK.totalHours} ч</div><div className="text-xs text-dim">до мастерства</div></div>
+              <div><div className="text-2xl font-bold">{TRACK.playable ? TRACK.nodes.length : TRACK.syllabus?.length}</div><div className="text-xs text-dim">{TRACK.playable ? 'понятий' : 'модулей'}</div></div>
+              <div><div className="text-2xl font-bold">{TRACK.weeks} нед</div><div className="text-xs text-dim">программа</div></div>
+              <div><div className="text-2xl font-bold">~{TRACK.hours} ч</div><div className="text-xs text-dim">до мастерства</div></div>
             </div>
-            <Link to="/track" className="btn-primary w-full mt-6 !py-3"><Icon name="hub" className="text-[20px]" /> Открыть древо знаний</Link>
+            <div className="mt-4 rounded-lg border border-amber/30 bg-amber/5 p-3 text-sm text-amber-soft flex gap-2"><Icon name="info" className="text-[18px] shrink-0" />Это демонстрация: генерация новой программы появится вместе с ИИ-бэкендом. Ниже — подходящий трек из каталога.</div>
+            <Link to={`/catalog/${TRACK.id}`} className="btn-primary w-full mt-4 !py-3"><Icon name="visibility" className="text-[20px]" /> {TRACK.title}</Link>
+            <Link to="/catalog" className="btn-ghost w-full mt-2">Весь каталог</Link>
           </div>
         )}
       </div>

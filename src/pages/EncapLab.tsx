@@ -48,7 +48,7 @@ export default function EncapLab() {
     const correct = FIELDS.filter((f) => f.change).map((f) => f.id).sort().join()
     if (picked.slice().sort().join() === correct) {
       setStage(3)
-      s.completeLab('encap', 'layers', Math.max(50, 100 - mistakes * 10))
+      s.completeLab('encap', 'layers', Math.max(50, 100 - mistakes * 10), mistakes)
     } else setMistakes((m) => m + 1)
   }
 
@@ -144,7 +144,7 @@ export default function EncapLab() {
                 <div className="font-bold text-lg mt-1">Лаборатория пройдена!</div>
                 <p className="text-sm text-mute mt-2">Главная мысль: <b className="text-ink">IP-адрес — пункт назначения, MAC-адрес — следующая остановка.</b> Роутер меняет «конверт» на каждом шаге, но не трогает содержимое.</p>
                 <div className="text-sm text-dim mt-3">Ошибок: {mistakes}</div>
-                <Link to="/track" className="btn-teal w-full mt-4">К древу знаний</Link>
+                <Link to="/track/networks" className="btn-teal w-full mt-4">К древу знаний</Link>
               </div>
             ) : (
               <>

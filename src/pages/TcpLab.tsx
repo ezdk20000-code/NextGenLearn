@@ -138,7 +138,7 @@ export default function TcpLab() {
 
   const xp = Math.max(60, 150 - mistakes * 10)
   const allDone = MISSIONS.every((m) => done.includes(m.id))
-  useEffect(() => { if (allDone) s.completeLab('tcp', 'tcp', xp) }, [allDone]) // eslint-disable-line
+  useEffect(() => { if (allDone) s.completeLab('tcp', 'tcp', xp, mistakes) }, [allDone]) // eslint-disable-line
 
   const restart = () => { setMsgs([]); setPhase('closed'); setDone([]); setMistakes(0); setAckPick(null); setRto(0) }
 
@@ -199,7 +199,7 @@ export default function TcpLab() {
               <div className="flex flex-col sm:flex-row items-center gap-3 pop">
                 <Icon name="verified" fill className="text-teal-soft text-[32px]" />
                 <div className="flex-1 text-center sm:text-left"><div className="font-bold">Лаборатория пройдена!</div><div className="text-sm text-mute">Ошибок: {mistakes} · начислено +{xp} XP</div></div>
-                <Link to="/track" className="btn-teal">К древу знаний</Link>
+                <Link to="/track/networks" className="btn-teal">К древу знаний</Link>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">

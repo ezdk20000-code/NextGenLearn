@@ -1,8 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import { useStore } from '../store'
-import { NODES, TRACK, nodeById } from '../data/networks'
-import { Bar, Icon, Ring, Stat } from '../components/ui'
+import { dayKey, useStore } from '../store'
+import { nodeById, trackById } from '../data'
+import { Bar, Icon, Ring, Stat, plural } from '../components/ui'
 import { usePlan } from './planData'
 
 export default function Today() {
@@ -12,7 +12,10 @@ export default function Today() {
   const due = s.dueCards().length
   const next = s.nextNode ? nodeById(s.nextNode) : undefined
   const plan = usePlan()
+  const TRACK = trackById(s.activeTrack)!
+  const NODES = TRACK.nodes
   const doneCount = NODES.filter((n) => s.status(n.id) === 'done').length
+  const others = s.enrolled.filter((t) => t !== s.activeTrack).map((t) => trackById(t)!)
   const hour = new Date().getHours()
   const greet = hour < 12 ? 'Доброе утро' : hour < 18 ? 'Добрый день' : 'Добрый вечер'
 
@@ -36,7 +39,7 @@ export default function Today() {
               </div>
             </Ring>
             <div className="flex-1 min-w-0">
-              <div className="label text-violet-soft">Продолжить · {TRACK.domain}</div>
+              <div className="label text-violet-soft">Продолжить · {TRACK.category}</div>
               <div className="text-xl font-bold mt-1">{TRACK.title}</div>
               <div className="text-sm text-mute mt-1">{doneCount} из {NODES.length} понятий освоено</div>
               {next && (
@@ -68,10 +71,10 @@ export default function Today() {
       </div>
 
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <Stat label="Серия" value={`${s.streak} дня`} hint="не прерывай цепочку" icon="local_fire_department" tone="amber" />
-        <Stat label="Опыт" value={s.xp} hint={`уровень ${1 + Math.floor(s.xp / 250)}`} icon="bolt" />
-        <Stat label="Фокус сегодня" value={`${s.focusMinutes} мин`} hint="цель — 60 мин" icon="timer" tone="teal" />
-        <Stat label="Лаборатории" value={`${s.labsDone.length} / 3`} hint="практика по треку" icon="science" tone="teal" />
+        <Stat label="Серия" value={`${s.streak} ${plural(s.streak, ['день', 'дня', 'дней'])}`} hint={s.activeDays.has(dayKey(Date.now())) ? 'сегодня засчитано' : 'позанимайся сегодня, чтобы продлить'} icon="local_fire_department" tone="amber" />
+        <Stat label="Опыт" value={s.xp} hint={`уровень ${s.level}`} icon="bolt" />
+        <Stat label="Фокус сегодня" value={`${s.focusMinutes} мин`} hint={`цель — ${s.prefs.dailyMinutes} мин`} icon="timer" tone="teal" />
+        <Stat label="Лаборатории" value={`${TRACK.labs.filter((l) => s.labsDone.includes(l.id)).length} / ${TRACK.labs.length}`} hint="практика по треку" icon="science" tone="teal" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-5">
@@ -80,7 +83,7 @@ export default function Today() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="label">План на сегодня</div>
-              <div className="font-semibold mt-1">Собран автоматически под твои 45 минут в день</div>
+              <div className="font-semibold mt-1">Собран под твои {s.prefs.dailyMinutes} минут в день</div>
             </div>
             <Link to="/plan" className="btn-ghost !px-2 !py-1.5 text-xs">Весь план <Icon name="arrow_forward" className="text-[16px]" /></Link>
           </div>
@@ -105,18 +108,20 @@ export default function Today() {
 
         {/* Новая тема */}
         <div className="lg:col-span-2 card p-5 flex flex-col">
-          <div className="label text-teal-soft">Изучить что угодно</div>
-          <div className="text-lg font-bold mt-1">Чему хочешь научиться дальше?</div>
-          <p className="text-sm text-mute mt-1">Опиши тему своими словами — NGL построит граф понятий, уроки, практику и карточки.</p>
-          <form className="mt-4 space-y-3" onSubmit={(e) => { e.preventDefault(); nav('/new', { state: { topic } }) }}>
-            <input className="input" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Например: «как работает блокчейн»" />
-            <button className="btn-teal w-full"><Icon name="auto_awesome" className="text-[18px]" /> Собрать программу</button>
-          </form>
-          <div className="flex flex-wrap gap-2 mt-4">
-            {['Квантовая физика', 'Испанский B2', 'Переговоры', 'SQL'].map((t) => (
-              <button key={t} onClick={() => nav('/new', { state: { topic: t } })} className="chip bg-s2 text-mute hover:text-ink">{t}</button>
+          <div className="label text-teal-soft">Мои треки</div>
+          <div className="space-y-2 mt-3">
+            {[TRACK, ...others].map((t) => (
+              <Link key={t.id} to={`/track/${t.id}`} onClick={() => s.setActiveTrack(t.id)} className={`flex items-center gap-3 rounded-lg border p-3 ${t.id === s.activeTrack ? 'border-violet/50 bg-violet/5' : 'border-line hover:border-s3'}`}>
+                <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: `linear-gradient(135deg, ${t.cover.from}, ${t.cover.to})` }}><Icon name={t.cover.icon} className="text-[20px]" /></div>
+                <div className="flex-1 min-w-0"><div className="text-sm font-semibold truncate">{t.title}</div><div className="mt-1.5"><Bar value={s.progressOf(t.id)} color="teal" /></div></div>
+                <span className="font-mono text-xs text-dim">{s.progressOf(t.id)}%</span>
+              </Link>
             ))}
           </div>
+          <form className="mt-4 flex gap-2" onSubmit={(e) => { e.preventDefault(); nav('/catalog') }}>
+            <input className="input !py-2.5" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Чему ещё научиться?" onFocus={() => nav('/catalog')} />
+          </form>
+          <Link to="/catalog" className="btn-teal w-full mt-2"><Icon name="explore" className="text-[18px]" /> Каталог треков</Link>
         </div>
       </div>
 
@@ -124,13 +129,13 @@ export default function Today() {
       <div className="card p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="label">Твой путь по треку</div>
-          <Link to="/track" className="btn-ghost !px-2 !py-1.5 text-xs">Открыть древо <Icon name="arrow_forward" className="text-[16px]" /></Link>
+          <Link to={`/track/${TRACK.id}`} className="btn-ghost !px-2 !py-1.5 text-xs">Открыть древо <Icon name="arrow_forward" className="text-[16px]" /></Link>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
           {NODES.map((n) => {
             const st = s.status(n.id)
             return (
-              <Link key={n.id} to={st === 'locked' ? '/track' : `/lesson/${n.id}`}
+              <Link key={n.id} to={st === 'locked' ? `/track/${TRACK.id}` : `/lesson/${n.id}`}
                 className={`shrink-0 w-44 rounded-lg border p-3 transition-colors ${st === 'done' ? 'border-teal/30 bg-teal/5' : st === 'available' ? 'border-violet/50 bg-violet/5 hover:shadow-glow' : 'border-line opacity-50'}`}>
                 <div className="flex items-center justify-between">
                   <Icon name={st === 'done' ? 'check_circle' : st === 'available' ? 'radio_button_checked' : 'lock'} fill={st === 'done'}
