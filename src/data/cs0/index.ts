@@ -28,7 +28,6 @@ const LABS: CsLabSpec[] = [
 // Карта: модули — ряды снизу вверх, «змейкой», чтобы цепочка уроков читалась без пересечений.
 const ROW = 108
 const HEIGHT = 70 + ROW * (CS0_MODULES.length - 1) + 90
-const XS = [190, 410, 630, 850]
 
 const nodes: GraphNode[] = []
 const lessons: Record<string, Lesson> = {}
@@ -37,7 +36,8 @@ let prev: string | null = null
 CS0_MODULES.forEach((m, mi) => {
   const y = HEIGHT - 70 - mi * ROW
   m.lessons.forEach((l, li) => {
-    const x = mi % 2 === 0 ? XS[li] : XS[XS.length - 1 - li]
+    const k = mi % 2 === 0 ? li : m.lessons.length - 1 - li
+    const x = 190 + (k * 680) / Math.max(1, m.lessons.length - 1)
     const lab = LABS.find((b) => b.node === l.id)
     nodes.push({ id: l.id, title: l.node, short: l.short, tier: Math.min(mi, 4) as Tier, x, y, requires: prev ? [prev] : [], minutes: l.minutes, xp: l.xp, lab: lab?.id, group: m.label, exam: l.exam })
     const cardIds = l.cards.map((_, k) => `${l.id}-c${k + 1}`)

@@ -75,7 +75,7 @@ export function QuizBlock({ q, options, correct, explain, onDone }: { q: string;
   return (
     <div className="rounded-lg border border-violet/30 bg-violet/5 p-4 md:p-5">
       <div className="label text-violet-soft mb-2 flex items-center gap-1.5"><Icon name="quiz" className="text-[16px]" />Проверь себя</div>
-      <div className="font-semibold">{q}</div>
+      <div className="font-semibold"><Md text={q} /></div>
       <div className="grid gap-2 mt-3">
         {options.map((o, i) => {
           const isPick = pick === i
