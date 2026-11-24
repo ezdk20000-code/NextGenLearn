@@ -5,6 +5,7 @@ import { useStore } from '../store'
 import { Icon } from '../components/ui'
 import type { LabProps } from '../labs/kit'
 import { BitsLab, BytesLab, LogicSeries, MorseLab, NAND_TASKS, SwitchesLab } from '../labs/cs0-a'
+import HdlLab from '../hdl/HdlLab'
 import { ADDER_TASKS, CounterLab, CpuLab, FloatLab, LatchLab, RamLab, TwosLab } from '../labs/cs0-b'
 
 /** Лаборатории курсов программы CS: id → интерактивная модель. */
@@ -21,6 +22,9 @@ const LABS: Record<string, ComponentType<LabProps>> = {
   'cs0-ram': RamLab,
   'cs0-cpu': CpuLab,
   'cs0-float': FloatLab,
+  'cs1-p1': (p) => <HdlLab project={1} {...p} />,
+  'cs1-p2': (p) => <HdlLab project={2} {...p} />,
+  'cs1-p3': (p) => <HdlLab project={3} {...p} />,
 }
 export const CS_LAB_IDS = Object.keys(LABS)
 
@@ -34,7 +38,7 @@ export default function CsLab() {
   const track = trackById(lab.trackId)
   const done = s.labsDone.includes(id)
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className={id.startsWith('cs1-p') ? 'max-w-[1500px] mx-auto' : 'max-w-6xl mx-auto'}>
       <div className="flex items-center gap-2 text-xs text-dim mb-3 flex-wrap">
         <Link to={`/track/${lab.trackId}`} className="hover:text-ink flex items-center gap-1"><Icon name="arrow_back" className="text-[16px]" />{track?.title}</Link>
         <span>/</span><Link to={`/lesson/${lab.nodeId}`} className="hover:text-ink">{node?.title}</Link>

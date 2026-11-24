@@ -19,4 +19,4 @@ export interface CsLesson {
 
 export interface CsModule { id: string; label: string; lessons: CsLesson[] }
 
-export interface CsLabSpec { id: string; node: string; icon: string; title: string; desc: string; skills: string[]; minutes: number; primitive: 'Симулятор схем' | 'Эмулятор процессора' | 'Конструктор' | 'Ползунки и визуализация' }
+export interface CsLabSpec { id: string; node: string; icon: string; title: string; desc: string; skills: string[]; minutes: number; primitive: 'Симулятор схем' | 'Эмулятор процессора' | 'Конструктор' | 'Ползунки и визуализация' | 'HDL-песочница' }

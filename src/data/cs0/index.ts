@@ -1,4 +1,4 @@
-import type { CardDef, GraphNode, LabDef, Lesson, Tier, Track } from '../types'
+import { buildCourseTrack } from '../course-builder'
 import type { CsLabSpec, CsModule } from './types'
 import { M1 } from './m1'
 import { M2 } from './m2'
@@ -25,48 +25,12 @@ const LABS: CsLabSpec[] = [
   { id: 'cs0-float', node: 'cs0-float-lesson', icon: 'functions', title: 'Устройство float', desc: 'Разбери число float32 на знак, порядок и мантиссу и пойми, почему 0,1 + 0,2 ≠ 0,3.', skills: ['IEEE 754', 'точность'], minutes: 12, primitive: 'Ползунки и визуализация' },
 ]
 
-// Карта: модули — ряды снизу вверх, «змейкой», чтобы цепочка уроков читалась без пересечений.
-const ROW = 108
-const HEIGHT = 70 + ROW * (CS0_MODULES.length - 1) + 90
-
-const nodes: GraphNode[] = []
-const lessons: Record<string, Lesson> = {}
-const cards: CardDef[] = []
-let prev: string | null = null
-CS0_MODULES.forEach((m, mi) => {
-  const y = HEIGHT - 70 - mi * ROW
-  m.lessons.forEach((l, li) => {
-    const k = mi % 2 === 0 ? li : m.lessons.length - 1 - li
-    const x = 190 + (k * 680) / Math.max(1, m.lessons.length - 1)
-    const lab = LABS.find((b) => b.node === l.id)
-    nodes.push({ id: l.id, title: l.node, short: l.short, tier: Math.min(mi, 4) as Tier, x, y, requires: prev ? [prev] : [], minutes: l.minutes, xp: l.xp, lab: lab?.id, group: m.label, exam: l.exam })
-    const cardIds = l.cards.map((_, k) => `${l.id}-c${k + 1}`)
-    l.cards.forEach(([front, back], k) => cards.push({ id: cardIds[k], nodeId: l.id, trackId: 'cs0-code', front, back }))
-    lessons[l.id] = { nodeId: l.id, title: l.title, blocks: l.blocks, cardIds, covers: l.covers, sources: l.sources }
-    prev = l.id
-  })
-})
-
-const labs: LabDef[] = LABS.filter((b) => lessons[b.node]).map((b) => ({ id: b.id, nodeId: b.node, icon: b.icon, title: b.title, desc: b.desc, skills: b.skills, minutes: b.minutes, primitive: b.primitive }))
-
-export const CS0_TRACK: Track = {
+export const CS0_TRACK = buildCourseTrack({
   id: 'cs0-code',
   title: 'CS0 · Как компьютер считает',
   subtitle: 'От лампочки и выключателя до процессора',
   description: 'Первый шаг программы Computer Science: коды и биты, системы счисления, логика, сумматор, память и процессор — с лабораториями, где ты собираешь схемы и пишешь машинные программы.',
-  category: 'CS и сети',
-  level: 'Фундамент',
-  weeks: 4,
-  hours: 30,
-  formats: ['Симуляции', 'Флеш-спринты'],
-  tags: ['биты', 'логика', 'процессор'],
-  outcomes: [],
+  category: 'CS и сети', level: 'Фундамент', weeks: 4, hours: 30,
+  formats: ['Симуляции', 'Флеш-спринты'], tags: ['биты', 'логика', 'процессор'], outcomes: [],
   cover: { from: '#312E81', to: '#0F766E', icon: 'memory', image: 'covers/cs-program.webp' },
-  playable: true,
-  hidden: true,
-  nodes,
-  lessons,
-  cards,
-  labs,
-  map: { height: HEIGHT, rows: CS0_MODULES.map((m, mi) => ({ label: m.label, y: HEIGHT - 70 - mi * ROW })) },
-}
+}, CS0_MODULES, LABS)

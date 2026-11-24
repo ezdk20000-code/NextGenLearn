@@ -2,11 +2,12 @@ import { NETWORKS } from './networks'
 import { NEGOTIATION } from './negotiation'
 import { DRAFT_TRACKS } from './catalog'
 import { CS0_TRACK } from './cs0'
+import { CS1_TRACK } from './cs1'
 import type { CardDef, GraphNode, LabDef, Lesson, Track } from './types'
 
 export * from './types'
 
-export const TRACKS: Track[] = [NETWORKS, NEGOTIATION, ...DRAFT_TRACKS, CS0_TRACK]
+export const TRACKS: Track[] = [NETWORKS, NEGOTIATION, ...DRAFT_TRACKS, CS0_TRACK, CS1_TRACK]
 /** Треки для каталога: курсы программы CS показываются внутри программы */
 export const CATALOG_TRACKS = TRACKS.filter((t) => !t.hidden)
 export const PLAYABLE = TRACKS.filter((t) => t.playable)

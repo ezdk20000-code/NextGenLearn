@@ -4,6 +4,7 @@ import { trackById } from '../data'
 import { useStore } from '../store'
 import { BOOKS, CS_PROGRAM, ENGINES, programStats, type ModuleLevel } from '../data/cs-program'
 import EvolutionBlock from '../components/EvolutionBlock'
+import Cs1Tower from './Cs1Tower'
 import { Icon } from '../components/ui'
 
 const LEVEL_TONE: Record<ModuleLevel, string> = {
@@ -163,6 +164,7 @@ export function ProgramCourse() {
       <h1 className="text-2xl md:text-[32px] md:leading-10 font-extrabold tracking-tight mt-1">{c.title}</h1>
       <p className="text-mute mt-1 max-w-3xl">{c.subtitle}</p>
       <div className="mt-4"><StartCourse courseId={c.id} /></div>
+      {c.id === 'cs1-nand2tetris' && <Cs1Tower />}
 
       <div className="grid gap-4 md:grid-cols-2 mt-6">
         <div className="card p-5">
