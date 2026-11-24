@@ -3,9 +3,16 @@ import { TIER_NAMES, trackById } from '../data'
 import { useStore } from '../store'
 import { Icon } from '../components/ui'
 import TrackCover from '../components/TrackCover'
+import { CS_PROGRAM } from '../data/cs-program'
+import { ProgramCourse } from './Program'
 
 export default function TrackDetail() {
   const { id = '' } = useParams()
+  if (CS_PROGRAM.courses.some((c) => c.id === id)) return <ProgramCourse />
+  return <TrackDetailInner id={id} />
+}
+
+function TrackDetailInner({ id }: { id: string }) {
   const s = useStore()
   const nav = useNavigate()
   const t = trackById(id)

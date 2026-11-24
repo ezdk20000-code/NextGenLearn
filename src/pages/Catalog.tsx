@@ -4,6 +4,8 @@ import { CATEGORIES, TRACKS, labById, nodeById, trackById, type Format, type Lev
 import { useStore } from '../store'
 import { Icon, Ring } from '../components/ui'
 import TrackCover from '../components/TrackCover'
+import { CsProgramSection } from './Program'
+import { CS_PROGRAM } from '../data/cs-program'
 
 const LEVELS: Level[] = ['Фундамент', 'Продвинутый', 'Мастерство']
 const FORMATS: Format[] = ['Симуляции', 'ИИ-спарринг', 'Кейсы', 'Флеш-спринты']
@@ -43,7 +45,7 @@ export default function Catalog() {
         <div className="absolute -right-20 -top-24 w-80 h-80 rounded-full bg-violet/10 blur-3xl" />
         <div className="relative flex flex-col lg:flex-row gap-6 lg:items-start">
           <div className="flex-1 min-w-0">
-            <div className="label text-teal-soft">Каталог · {TRACKS.length} программ</div>
+            <div className="label text-teal-soft">Каталог · {TRACKS.length + CS_PROGRAM.courses.length} программ</div>
             <h1 className="text-2xl md:text-[32px] md:leading-10 font-extrabold tracking-tight mt-2">Треки и программы мастерства</h1>
             <p className="text-mute mt-2 max-w-2xl">Выбери направление: у каждого трека есть граф понятий, уроки с проверками, лаборатории и карточки для повторения.</p>
           </div>
@@ -62,21 +64,11 @@ export default function Catalog() {
           {filtersOn && <button onClick={() => { setQ(''); setCat('Все'); setLevel(null); setFormat(null); setDur(null) }} className="text-xs text-dim hover:text-ink font-mono">сбросить</button>}
         </div>
         <div className="relative flex gap-2 mt-4 overflow-x-auto pb-1 -mx-1 px-1">
-          {['Все', ...CATEGORIES].map((c) => (
+          {['Все', 'Computer Science', ...CATEGORIES].map((c) => (
             <button key={c} onClick={() => setCat(c)} className={`chip !text-xs !px-3 !py-1.5 shrink-0 border ${cat === c ? 'bg-violet text-white border-violet' : 'border-line text-mute hover:text-ink'}`}>{c}</button>
           ))}
         </div>
       </section>
-
-      <Link to="/program" className="card card-hover p-5 md:p-6 flex flex-col md:flex-row gap-4 md:items-center border-violet/40 shadow-glow-violet">
-        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-violet to-teal grid place-items-center shrink-0"><Icon name="school" fill /></div>
-        <div className="flex-1">
-          <div className="label text-violet-soft">Большая программа · 7 курсов</div>
-          <div className="font-bold text-lg mt-0.5">Computer Science: от вентиля до интернета</div>
-          <p className="text-sm text-mute mt-0.5">Собрана по твоим 9 книгам: от логических вентилей и своего компьютера до ОС, сетей и безопасности.</p>
-        </div>
-        <span className="btn-primary shrink-0">Смотреть программу <Icon name="arrow_forward" className="text-[18px]" /></span>
-      </Link>
 
       {/* Продолжить */}
       {enrolled.length > 0 && !filtersOn && (
@@ -91,8 +83,10 @@ export default function Catalog() {
         </section>
       )}
 
+      {(cat === 'Все' || cat === 'Computer Science') && !level && !format && !dur && <CsProgramSection q={q} />}
+
       {/* Фильтры и сетка */}
-      <section>
+      {cat !== 'Computer Science' && <section>
         <div className="flex flex-wrap items-end justify-between gap-2 mb-3">
           <h2 className="text-lg font-bold flex items-center gap-2"><Icon name="auto_awesome" className="text-violet-soft" />{filtersOn ? 'Результаты' : 'Все программы'}</h2>
           <span className="text-xs text-dim">Найдено: {list.length}</span>
@@ -112,7 +106,7 @@ export default function Catalog() {
             {list.map((t) => <TrackCard key={t.id} track={t} />)}
           </div>
         )}
-      </section>
+      </section>}
 
       <section className="card p-5 md:p-6 flex flex-col md:flex-row gap-4 md:items-center">
         <div className="w-12 h-12 rounded-lg bg-violet/15 grid place-items-center shrink-0"><Icon name="construction" className="text-violet-soft text-[26px]" /></div>
