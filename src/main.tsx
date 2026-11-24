@@ -34,6 +34,7 @@ import PlanBoard from './pages/PlanBoard'
 import TaskDetail from './pages/TaskDetail'
 import FocusSession from './pages/FocusSession'
 import Profile from './pages/Profile'
+import CsLab from './pages/CsLab'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -56,6 +57,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="lab/subnet" element={<SubnetLab />} />
             <Route path="lab/encap" element={<EncapLab />} />
             <Route path="lab/negotiation" element={<NegotiationLab />} />
+            <Route path="lab/:id" element={<CsLab />} />
             <Route path="review" element={<Review />} />
             <Route path="cards" element={<Cards />} />
             <Route path="settings/fsrs" element={<FsrsSettings />} />

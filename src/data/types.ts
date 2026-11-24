@@ -15,6 +15,9 @@ export interface GraphNode {
   minutes: number
   xp: number
   lab?: string
+  /** Подпись ряда/модуля (для больших курсов вместо уровня дерева) */
+  group?: string
+  exam?: boolean
 }
 
 export type LessonBlock =
@@ -25,12 +28,20 @@ export type LessonBlock =
   | { type: 'order'; q: string; items: string[]; explain: string }
   | { type: 'feynman'; prompt: string; keywords: string[] }
   | { type: 'terms'; items: { term: string; def: string }[] }
+  | { type: 'evolution'; topic: string; was: string; now: string }
+  | { type: 'numeric'; q: string; answer: string; accept?: string[]; hint?: string; explain: string }
+  | { type: 'truth'; q: string; inputs: string[]; output: string; values: number[]; explain: string }
+  | { type: 'code'; title?: string; code: string }
 
 export interface Lesson {
   nodeId: string
   title: string
   blocks: LessonBlock[]
   cardIds: string[]
+  /** Понятия программы, которые закрывает урок (для проверки полноты) */
+  covers?: string[]
+  /** Главы книг, по которым написан урок */
+  sources?: string[]
 }
 
 export interface CardDef { id: string; nodeId: string | null; trackId: string; front: string; back: string; own?: boolean }
@@ -43,7 +54,7 @@ export interface LabDef {
   desc: string
   skills: string[]
   minutes: number
-  primitive: 'Пошаговый симулятор' | 'Ползунки и визуализация' | 'Конструктор' | 'Диалог-сценарий'
+  primitive: 'Пошаговый симулятор' | 'Ползунки и визуализация' | 'Конструктор' | 'Диалог-сценарий' | 'Симулятор схем' | 'Эмулятор процессора'
 }
 
 export type Level = 'Фундамент' | 'Продвинутый' | 'Мастерство'
@@ -71,6 +82,10 @@ export interface Track {
   labs: LabDef[]
   /** Программа для треков, которые ещё не собраны полностью */
   syllabus?: { title: string; items: string[] }[]
+  /** Не показывать отдельной карточкой в каталоге (курс внутри программы) */
+  hidden?: boolean
+  /** Свой размер карты и подписи рядов */
+  map?: { height: number; rows: { label: string; y: number }[] }
 }
 
 export const CATEGORIES = ['CS и сети', 'Переговоры', 'Языки', 'Мышление', 'Наука', 'Финансы', 'Право'] as const

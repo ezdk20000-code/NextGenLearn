@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { CATEGORIES, TRACKS, labById, nodeById, trackById, type Format, type Level, type Track } from '../data'
+import { CATEGORIES, CATALOG_TRACKS as TRACKS, labById, nodeById, trackById, type Format, type Level, type Track } from '../data'
 import { useStore } from '../store'
 import { Icon, Ring } from '../components/ui'
 import TrackCover from '../components/TrackCover'

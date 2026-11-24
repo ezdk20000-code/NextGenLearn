@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { trackById } from '../data'
+import { useStore } from '../store'
 import { BOOKS, CS_PROGRAM, ENGINES, programStats, type ModuleLevel } from '../data/cs-program'
 import EvolutionBlock from '../components/EvolutionBlock'
 import { Icon } from '../components/ui'
@@ -13,6 +15,20 @@ const LEVEL_TONE: Record<ModuleLevel, string> = {
 
 export const CS_PROGRAM_ID = 'cs'
 const COVER = 'covers/cs-program.webp'
+
+/** Кнопка «Начать / Продолжить курс», если уроки курса уже готовы. */
+function StartCourse({ courseId, label, className = 'btn-primary' }: { courseId: string; label?: string; className?: string }) {
+  const s = useStore()
+  const nav = useNavigate()
+  const t = trackById(courseId)
+  if (!t?.playable) return <span className="btn-secondary opacity-70 cursor-default"><Icon name="edit_note" className="text-[18px]" />Уроки курса пишутся</span>
+  const isIn = s.enrolled.includes(t.id)
+  return (
+    <button className={className} onClick={() => { if (!isIn) { s.enroll(t.id); s.notify(`Курс «${t.title}» начат`) } else s.setActiveTrack(t.id); nav(`/track/${t.id}`) }}>
+      <Icon name={isIn ? 'hub' : 'play_arrow'} fill className="text-[18px]" />{isIn ? `Продолжить · ${s.progressOf(t.id)}%` : label ?? 'Начать курс'}
+    </button>
+  )
+}
 
 const searchText = () => `${CS_PROGRAM.title} ${CS_PROGRAM.subtitle} computer science ${CS_PROGRAM.courses.map((c) => `${c.code} ${c.title} ${c.subtitle} ${c.modules.map((m) => `${m.title} ${m.concepts.join(' ')}`).join(' ')}`).join(' ')}`.toLowerCase()
 export const csProgramMatches = (q: string) => !q.trim() || searchText().includes(q.trim().toLowerCase())
@@ -81,7 +97,7 @@ export function ProgramOverview() {
             ))}
           </div>
           <div className="flex flex-col sm:flex-row gap-2 mt-6">
-            <Link to={`/catalog/${CS_PROGRAM.courses[0].id}`} className="btn-primary"><Icon name="play_arrow" fill className="text-[18px]" />Начать с шага 1: {CS_PROGRAM.courses[0].code}</Link>
+            <StartCourse courseId={CS_PROGRAM.courses[0].id} label={`Начать с шага 1: ${CS_PROGRAM.courses[0].code}`} />
             <button onClick={() => setAbout((a) => !a)} className="btn-secondary" aria-expanded={about}>О программе <Icon name={about ? 'expand_less' : 'expand_more'} className="text-[18px]" /></button>
           </div>
           {about && (
@@ -110,7 +126,7 @@ export function ProgramOverview() {
               <Link to={`/catalog/${c.id}`} className="card card-hover p-4 md:p-5 flex gap-4 items-start">
                 <div className="w-12 h-12 md:w-14 md:h-14 rounded-lg bg-gradient-to-br from-[#312E81] to-[#0F766E] grid place-items-center font-mono font-bold text-white/90 shrink-0">{c.code}</div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-mono text-[11px] text-violet-soft">Шаг {i + 1} из {CS_PROGRAM.courses.length}{c.requires.length ? ` · после ${c.requires.map((r) => CS_PROGRAM.courses.find((x) => x.id === r)!.code).join(', ')}` : ''}</div>
+                  <div className="font-mono text-[11px] text-violet-soft">{trackById(c.id)?.playable ? <span className="chip bg-teal/15 text-teal-soft !py-0 mr-2 font-sans">уроки готовы</span> : null}Шаг {i + 1} из {CS_PROGRAM.courses.length}{c.requires.length ? ` · после ${c.requires.map((r) => CS_PROGRAM.courses.find((x) => x.id === r)!.code).join(', ')}` : ''}</div>
                   <div className="font-bold text-lg leading-snug mt-0.5">{c.title}</div>
                   <p className="text-sm text-mute mt-1 line-clamp-2">{c.subtitle}</p>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5 text-xs text-mute">
@@ -146,6 +162,7 @@ export function ProgramCourse() {
       <div className="font-mono text-xs text-violet-soft">{CS_PROGRAM.title} · шаг {idx + 1} из {CS_PROGRAM.courses.length} · {c.code} · ≈{c.weeks} недель · {c.modules.length} модулей</div>
       <h1 className="text-2xl md:text-[32px] md:leading-10 font-extrabold tracking-tight mt-1">{c.title}</h1>
       <p className="text-mute mt-1 max-w-3xl">{c.subtitle}</p>
+      <div className="mt-4"><StartCourse courseId={c.id} /></div>
 
       <div className="grid gap-4 md:grid-cols-2 mt-6">
         <div className="card p-5">

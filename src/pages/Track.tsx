@@ -58,15 +58,15 @@ export default function Track() {
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="card grid-bg overflow-x-auto">
           <div className="md:hidden text-[11px] text-dim px-4 pt-3 flex items-center gap-1"><Icon name="swipe" className="text-[14px]" />Листай граф в стороны</div>
-          <svg viewBox="0 0 1000 660" className="w-full min-w-[760px] h-auto select-none">
+          <svg viewBox={`0 0 1000 ${track.map?.height ?? 660}`} className="w-full min-w-[760px] h-auto select-none">
             <defs>
               <linearGradient id="edge" x1="0" y1="1" x2="0" y2="0">
                 <stop offset="0%" stopColor="#14B8A6" /><stop offset="100%" stopColor="#6366F1" />
               </linearGradient>
               <filter id="glow"><feGaussianBlur stdDeviation="6" /></filter>
             </defs>
-            {TIER_NAMES.map((t, i) => (
-              <text key={t} x={18} y={600 - i * 125} fill="#64748B" fontSize="12" fontWeight="700" letterSpacing="1.5">{t.toUpperCase()}</text>
+            {(track.map?.rows ?? TIER_NAMES.map((t, i) => ({ label: t.toUpperCase(), y: 600 - i * 125 }))).map((r) => (
+              <text key={r.label} x={18} y={r.y + 4} fill="#64748B" fontSize="12" fontWeight="700" letterSpacing="1.5">{r.label}</text>
             ))}
             {edges.map(({ from, to }) => {
               const lit = s.status(from.id) === 'done'
@@ -88,7 +88,7 @@ export default function Track() {
                   <circle r={24} fill={ns === 'done' ? 'rgba(20,184,166,0.15)' : ns === 'available' ? 'rgba(99,102,241,0.2)' : '#111827'} stroke={COLORS[ns]} strokeWidth={2} />
                   <text textAnchor="middle" dy="7" fontSize="20" fill={ns === 'locked' ? '#475569' : ns === 'done' ? '#4FDBC8' : '#C0C1FF'}
                     style={{ fontFamily: 'Material Symbols Rounded' }}>
-                    {ns === 'done' ? 'check' : ns === 'locked' ? 'lock' : n.lab ? 'science' : 'play_arrow'}
+                    {ns === 'done' ? 'check' : ns === 'locked' ? 'lock' : n.exam ? 'quiz' : n.lab ? 'science' : 'play_arrow'}
                   </text>
                   <text textAnchor="middle" y={44} fontSize="14" fontWeight="600" fill={ns === 'locked' ? '#64748B' : '#F8FAFC'}
                     stroke="#0B0F17" strokeWidth={5} strokeLinejoin="round" style={{ paintOrder: 'stroke' }}>{n.title}</text>
@@ -101,7 +101,7 @@ export default function Track() {
         {/* Панель узла */}
         <div className="card p-5 lg:sticky lg:top-24 self-start pop" key={node.id}>
           <div className="flex items-center gap-2">
-            <span className="chip bg-s2 text-mute">{TIER_NAMES[node.tier]}</span>
+            <span className="chip bg-s2 text-mute">{node.group ?? TIER_NAMES[node.tier]}</span>{node.exam && <span className="chip bg-amber/15 text-amber-soft">Экзамен</span>}
             <span className={`chip ${st === 'done' ? 'bg-teal/15 text-teal-soft' : st === 'available' ? 'bg-violet/15 text-violet-soft' : 'bg-s2 text-dim'}`}>
               {st === 'done' ? 'Освоено' : st === 'available' ? 'Доступно' : 'Закрыто'}
             </span>
@@ -148,7 +148,7 @@ export default function Track() {
             ) : (
               <Link to={`/lesson/${node.id}`} className="btn-primary w-full">
                 <Icon name={st === 'done' ? 'replay' : 'play_arrow'} fill className="text-[20px]" />
-                {st === 'done' ? 'Повторить урок' : 'Начать урок'}
+                {node.exam ? (st === 'done' ? 'Пересдать экзамен' : 'Сдать экзамен') : st === 'done' ? 'Повторить урок' : 'Начать урок'}
                 {!track.lessons[node.id] && <span className="chip bg-white/15 !py-0 ml-1">черновик</span>}
               </Link>
             )}

@@ -94,7 +94,7 @@ export function QuizBlock({ q, options, correct, explain, onDone }: { q: string;
       </div>
       {pick !== null && (
         <div className={`mt-3 rounded-lg p-3 text-sm pop ${answered ? 'bg-teal/10 text-ink' : 'bg-rose/10'}`}>
-          {answered ? <><b className="text-teal-soft">Верно{tries === 1 ? ' с первой попытки!' : '.'}</b> <Md text={explain} /></> : 'Не совсем. Подумай ещё — какой слой отвечает именно за это?'}
+          {answered ? <><b className="text-teal-soft">Верно{tries === 1 ? ' с первой попытки!' : '.'}</b> <Md text={explain} /></> : 'Не совсем. Перечитай объяснение выше и попробуй ещё раз.'}
         </div>
       )}
     </div>
@@ -200,6 +200,76 @@ export function TermsBlock({ items }: { items: { term: string; def: string }[] }
           </div>
         ))}
       </dl>
+    </div>
+  )
+}
+
+const normAns = (x: string) => x.trim().toLowerCase().replace(/\s+/g, '').replace(',', '.').replace(/^0x/, '')
+
+export function NumericBlock({ q, answer, accept = [], hint, explain, onDone }: { q: string; answer: string; accept?: string[]; hint?: string; explain: string; onDone: (ok: boolean) => void }) {
+  const [v, setV] = useState('')
+  const [tries, setTries] = useState(0)
+  const [ok, setOk] = useState(false)
+  const [wrong, setWrong] = useState(false)
+  const submit = () => {
+    if (!v.trim() || ok) return
+    const good = [answer, ...accept].map(normAns).includes(normAns(v))
+    setTries((t) => t + 1)
+    if (good) { setOk(true); setWrong(false); onDone(tries === 0) } else setWrong(true)
+  }
+  return (
+    <div className="rounded-lg border border-violet/30 bg-violet/5 p-4 md:p-5">
+      <div className="label text-violet-soft mb-2 flex items-center gap-1.5"><Icon name="calculate" className="text-[16px]" />Посчитай</div>
+      <div className="font-semibold"><Md text={q} /></div>
+      <form className="flex gap-2 mt-3" onSubmit={(e) => { e.preventDefault(); submit() }}>
+        <input className="input font-mono" value={v} onChange={(e) => { setV(e.target.value); setWrong(false) }} disabled={ok} placeholder="Ответ" aria-label="Ответ" />
+        {!ok && <button className="btn-secondary shrink-0">Проверить</button>}
+      </form>
+      {wrong && <div className="mt-3 rounded-lg p-3 text-sm bg-rose/10 pop">Не сходится.{hint ? <> Подсказка: <Md text={hint} /></> : ' Пересчитай по шагам из объяснения выше.'}{tries >= 2 && <button type="button" onClick={() => { setV(answer); }} className="text-violet-soft hover:underline ml-2">Показать ответ</button>}</div>}
+      {ok && <div className="mt-3 rounded-lg p-3 text-sm bg-teal/10 pop"><b className="text-teal-soft">Верно{tries === 1 ? ' с первой попытки!' : '.'}</b> <Md text={explain} /></div>}
+    </div>
+  )
+}
+
+export function TruthBlock({ q, inputs, output, values, explain, onDone }: { q: string; inputs: string[]; output: string; values: number[]; explain: string; onDone: (ok: boolean) => void }) {
+  const rows = Array.from({ length: 2 ** inputs.length }, (_, i) => inputs.map((_, k) => (i >> (inputs.length - 1 - k)) & 1))
+  const [cells, setCells] = useState<(number | null)[]>(rows.map(() => null))
+  const [checked, setChecked] = useState(false)
+  const [tries, setTries] = useState(0)
+  const ok = checked && cells.every((c, i) => c === values[i])
+  const check = () => {
+    const good = cells.every((c, i) => c === values[i])
+    setChecked(true); setTries((t) => t + 1)
+    if (good) onDone(tries === 0)
+  }
+  return (
+    <div className="rounded-lg border border-teal/30 bg-teal/5 p-4 md:p-5">
+      <div className="label text-teal-soft mb-2 flex items-center gap-1.5"><Icon name="table_chart" className="text-[16px]" />Заполни таблицу истинности</div>
+      <div className="font-semibold"><Md text={q} /></div>
+      <table className="mt-3 font-mono text-sm">
+        <thead><tr className="text-dim text-xs">{inputs.map((i) => <th key={i} className="px-3 py-1 text-left">{i}</th>)}<th className="px-3 py-1 text-left text-amber-soft">{output}</th></tr></thead>
+        <tbody>{rows.map((r, i) => (
+          <tr key={i} className="border-t border-line">
+            {r.map((b, k) => <td key={k} className="px-3 py-1.5">{b}</td>)}
+            <td className="px-2 py-1">
+              <button disabled={ok} onClick={() => { setChecked(false); setCells(cells.map((c, k) => (k === i ? (c === 1 ? 0 : 1) : c))) }}
+                className={`w-9 h-8 rounded-md border font-bold ${cells[i] === null ? 'border-line text-dim' : checked ? (cells[i] === values[i] ? 'border-teal text-teal-soft' : 'border-rose text-rose-soft') : 'border-s3'}`}>{cells[i] ?? '?'}</button>
+            </td>
+          </tr>
+        ))}</tbody>
+      </table>
+      {!ok && <button onClick={check} disabled={cells.some((c) => c === null)} className="btn-secondary !py-2 mt-3">Проверить</button>}
+      {checked && !ok && <div className="mt-3 rounded-lg p-3 text-sm bg-rose/10 pop">Красные клетки неверны — нажми на них, чтобы поменять.</div>}
+      {ok && <div className="mt-3 rounded-lg p-3 text-sm bg-teal/10 pop"><b className="text-teal-soft">Верно{tries === 1 ? ' с первой попытки!' : '.'}</b> <Md text={explain} /></div>}
+    </div>
+  )
+}
+
+export function CodeBlock({ title, code }: { title?: string; code: string }) {
+  return (
+    <div className="rounded-lg border border-line bg-[#0A0E16] overflow-hidden">
+      {title && <div className="px-4 py-2 border-b border-line text-xs text-dim flex items-center gap-1.5"><Icon name="code" className="text-[16px]" />{title}</div>}
+      <pre className="p-4 text-[13px] leading-6 font-mono text-ink/90 overflow-x-auto">{code}</pre>
     </div>
   )
 }
