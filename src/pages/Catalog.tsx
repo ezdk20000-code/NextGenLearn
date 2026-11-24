@@ -4,8 +4,7 @@ import { CATEGORIES, TRACKS, labById, nodeById, trackById, type Format, type Lev
 import { useStore } from '../store'
 import { Icon, Ring } from '../components/ui'
 import TrackCover from '../components/TrackCover'
-import { CsProgramSection } from './Program'
-import { CS_PROGRAM } from '../data/cs-program'
+import { CsProgramCard, csProgramMatches } from './Program'
 
 const LEVELS: Level[] = ['Фундамент', 'Продвинутый', 'Мастерство']
 const FORMATS: Format[] = ['Симуляции', 'ИИ-спарринг', 'Кейсы', 'Флеш-спринты']
@@ -33,6 +32,11 @@ export default function Catalog() {
       && (!dur || DURATIONS.find((d) => d.id === dur)!.test(t.weeks))
   }), [q, cat, level, format, dur])
 
+  // Программа CS — один «большой» трек: уровень «Мастерство», длинная, с симуляциями
+  const showCs = csProgramMatches(q) && (cat === 'Все' || cat === 'Computer Science')
+    && (!level || level === 'Мастерство') && (!format || format === 'Симуляции') && (!dur || dur === 'long')
+  const found = list.length + (showCs ? 1 : 0)
+
   const enrolled = s.enrolled.map((id) => trackById(id)!).filter(Boolean)
   const totalDone = s.lessonsDone.length
   const avg = enrolled.length ? Math.round(enrolled.reduce((a, t) => a + s.progressOf(t.id), 0) / enrolled.length) : 0
@@ -45,7 +49,7 @@ export default function Catalog() {
         <div className="absolute -right-20 -top-24 w-80 h-80 rounded-full bg-violet/10 blur-3xl" />
         <div className="relative flex flex-col lg:flex-row gap-6 lg:items-start">
           <div className="flex-1 min-w-0">
-            <div className="label text-teal-soft">Каталог · {TRACKS.length + CS_PROGRAM.courses.length} программ</div>
+            <div className="label text-teal-soft">Каталог · {TRACKS.length + 1} программ</div>
             <h1 className="text-2xl md:text-[32px] md:leading-10 font-extrabold tracking-tight mt-2">Треки и программы мастерства</h1>
             <p className="text-mute mt-2 max-w-2xl">Выбери направление: у каждого трека есть граф понятий, уроки с проверками, лаборатории и карточки для повторения.</p>
           </div>
@@ -83,13 +87,11 @@ export default function Catalog() {
         </section>
       )}
 
-      {(cat === 'Все' || cat === 'Computer Science') && !level && !format && !dur && <CsProgramSection q={q} />}
-
       {/* Фильтры и сетка */}
-      {cat !== 'Computer Science' && <section>
+      <section>
         <div className="flex flex-wrap items-end justify-between gap-2 mb-3">
           <h2 className="text-lg font-bold flex items-center gap-2"><Icon name="auto_awesome" className="text-violet-soft" />{filtersOn ? 'Результаты' : 'Все программы'}</h2>
-          <span className="text-xs text-dim">Найдено: {list.length}</span>
+          <span className="text-xs text-dim">Найдено: {found}</span>
         </div>
         <div className="card p-4 mb-4 grid gap-4 md:grid-cols-3">
           <FilterGroup label="Сложность" options={LEVELS} value={level} onChange={setLevel} />
@@ -97,16 +99,17 @@ export default function Catalog() {
           <FilterGroup label="Длительность" options={DURATIONS.map((d) => d.label)} value={dur ? DURATIONS.find((d) => d.id === dur)!.label : null}
             onChange={(v) => setDur(v ? DURATIONS.find((d) => d.label === v)!.id : null)} />
         </div>
-        {list.length === 0 ? (
+        {found === 0 ? (
           <div className="card p-8 text-center text-mute">
             Ничего не нашлось. Попробуй другой запрос или <button onClick={() => nav('/new', { state: { topic: q } })} className="text-violet-soft hover:underline">собери свою программу</button>.
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {showCs && <CsProgramCard />}
             {list.map((t) => <TrackCard key={t.id} track={t} />)}
           </div>
         )}
-      </section>}
+      </section>
 
       <section className="card p-5 md:p-6 flex flex-col md:flex-row gap-4 md:items-center">
         <div className="w-12 h-12 rounded-lg bg-violet/15 grid place-items-center shrink-0"><Icon name="construction" className="text-violet-soft text-[26px]" /></div>

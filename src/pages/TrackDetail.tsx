@@ -4,10 +4,11 @@ import { useStore } from '../store'
 import { Icon } from '../components/ui'
 import TrackCover from '../components/TrackCover'
 import { CS_PROGRAM } from '../data/cs-program'
-import { ProgramCourse } from './Program'
+import { CS_PROGRAM_ID, ProgramCourse, ProgramOverview } from './Program'
 
 export default function TrackDetail() {
   const { id = '' } = useParams()
+  if (id === CS_PROGRAM_ID) return <ProgramOverview />
   if (CS_PROGRAM.courses.some((c) => c.id === id)) return <ProgramCourse />
   return <TrackDetailInner id={id} />
 }

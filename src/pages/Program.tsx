@@ -11,64 +11,122 @@ const LEVEL_TONE: Record<ModuleLevel, string> = {
   'Эксперт': 'bg-rose/15 text-rose-soft',
 }
 
-/** Раздел программы в каталоге треков: 7 курсов по порядку прохождения. */
-export function CsProgramSection({ q }: { q: string }) {
+export const CS_PROGRAM_ID = 'cs'
+const COVER = 'covers/cs-program.webp'
+
+const searchText = () => `${CS_PROGRAM.title} ${CS_PROGRAM.subtitle} computer science ${CS_PROGRAM.courses.map((c) => `${c.code} ${c.title} ${c.subtitle} ${c.modules.map((m) => `${m.title} ${m.concepts.join(' ')}`).join(' ')}`).join(' ')}`.toLowerCase()
+export const csProgramMatches = (q: string) => !q.trim() || searchText().includes(q.trim().toLowerCase())
+
+function ProgramCover({ className = 'h-36' }: { className?: string }) {
+  return (
+    <div className={`relative overflow-hidden bg-gradient-to-br from-[#312E81] to-[#0F766E] ${className}`}>
+      <img src={COVER} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F17] via-transparent to-transparent opacity-80" />
+      <div className="absolute left-4 top-4 flex gap-1.5">
+        <span className="chip bg-black/40 backdrop-blur text-white/90 border border-white/15">Мастерство</span>
+        <span className="chip bg-amber/90 text-[#2a1700]">Новый</span>
+        <span className="chip bg-black/40 backdrop-blur text-white/90 border border-white/15">{CS_PROGRAM.courses.length} курсов</span>
+      </div>
+    </div>
+  )
+}
+
+/** Карточка программы CS в каталоге — в том же стиле, что и остальные треки. */
+export function CsProgramCard() {
+  const st = programStats()
+  const facts = [
+    { icon: 'calendar_month', t: `≈${st.weeks} нед · ${st.courses} курсов` },
+    { icon: 'hub', t: `${st.concepts} понятий` },
+    { icon: 'science', t: `${st.labs} лабораторий` },
+    { icon: 'assignment', t: `${st.projects} проект · ${st.modules} модулей` },
+  ]
+  return (
+    <article className="card overflow-hidden flex flex-col card-hover">
+      <Link to={`/catalog/${CS_PROGRAM_ID}`}><ProgramCover /></Link>
+      <div className="p-5 flex-1 flex flex-col">
+        <div className="flex flex-wrap gap-1.5">{['Computer Science', 'Железо', 'ОС', 'Сети', 'Безопасность'].map((x) => <span key={x} className="text-[10px] font-bold uppercase tracking-wider text-dim">{x}</span>)}</div>
+        <Link to={`/catalog/${CS_PROGRAM_ID}`} className="text-lg font-bold leading-snug mt-2 hover:text-violet-soft">{CS_PROGRAM.title}</Link>
+        <p className="text-sm text-mute mt-1.5 line-clamp-3">{CS_PROGRAM.subtitle}</p>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-4 text-xs text-mute">
+          {facts.map((f) => <div key={f.icon} className="flex items-center gap-1.5 min-w-0"><Icon name={f.icon} className="text-[16px] text-dim shrink-0" /><span className="truncate">{f.t}</span></div>)}
+        </div>
+        <div className="mt-auto pt-5">
+          <Link to={`/catalog/${CS_PROGRAM_ID}`} className="btn-primary w-full">Открыть программу <Icon name="arrow_forward" className="text-[18px]" /></Link>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+/** Страница программы: описание и 7 шагов-курсов по порядку прохождения. */
+export function ProgramOverview() {
   const [about, setAbout] = useState(false)
   const st = programStats()
-  const needle = q.trim().toLowerCase()
-  const courses = CS_PROGRAM.courses.filter((c) => !needle || `${c.code} ${c.title} ${c.subtitle} ${c.modules.map((m) => `${m.title} ${m.concepts.join(' ')}`).join(' ')}`.toLowerCase().includes(needle))
-  if (!courses.length) return null
   return (
-    <section>
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-2 mb-3">
-        <div>
-          <h2 className="text-lg font-bold flex items-center gap-2"><Icon name="school" className="text-violet-soft" />{CS_PROGRAM.title}</h2>
-          <p className="text-sm text-mute mt-0.5">Программа из {st.courses} курсов по твоим 9 книгам · {st.modules} модулей · {st.concepts} понятий · {st.labs} лабораторий · ≈{st.weeks} недель</p>
+    <div className="max-w-5xl mx-auto">
+      <Link to="/catalog" className="text-xs text-dim hover:text-ink flex items-center gap-1 mb-3"><Icon name="arrow_back" className="text-[16px]" />Каталог</Link>
+      <div className="card overflow-hidden">
+        <ProgramCover className="h-44 md:h-56" />
+        <div className="p-5 md:p-7 -mt-16 relative">
+          <div className="label text-teal-soft">Computer Science · {st.courses} курсов · ≈{st.weeks} недель</div>
+          <h1 className="text-2xl md:text-[32px] md:leading-10 font-extrabold tracking-tight mt-2">{CS_PROGRAM.title}</h1>
+          <p className="text-mute mt-1 max-w-3xl">{CS_PROGRAM.subtitle}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mt-5">
+            {[['view_module', st.modules, 'модулей'], ['hub', st.concepts, 'понятий'], ['science', st.labs, 'лабораторий'], ['assignment', st.projects, 'проектов'], ['update', st.updates, 'обновлений «было → стало»'], ['menu_book', Object.keys(BOOKS).length, 'книг-источников']].map(([icon, n, l]) => (
+              <div key={l as string} className="rounded-lg border border-line bg-[#0A0E16] p-3">
+                <Icon name={icon as string} className="text-violet-soft text-[18px]" />
+                <div className="text-xl font-bold mt-1">{n}</div>
+                <div className="text-[11px] text-dim leading-tight">{l}</div>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 mt-6">
+            <Link to={`/catalog/${CS_PROGRAM.courses[0].id}`} className="btn-primary"><Icon name="play_arrow" fill className="text-[18px]" />Начать с шага 1: {CS_PROGRAM.courses[0].code}</Link>
+            <button onClick={() => setAbout((a) => !a)} className="btn-secondary" aria-expanded={about}>О программе <Icon name={about ? 'expand_less' : 'expand_more'} className="text-[18px]" /></button>
+          </div>
+          {about && (
+            <div className="mt-4 grid gap-4 md:grid-cols-2 pop">
+              <div>
+                <div className="label mb-2">Книги-источники</div>
+                <ul className="space-y-1 text-sm text-mute">{Object.values(BOOKS).map((b) => <li key={b} className="flex gap-2"><Icon name="menu_book" className="text-[16px] text-violet-soft shrink-0 mt-0.5" />{b}</li>)}</ul>
+              </div>
+              <div>
+                <div className="label mb-2">Движки лабораторий · готово {Object.values(ENGINES).filter((e) => e.ready).length} из {Object.keys(ENGINES).length}</div>
+                <div className="flex flex-wrap gap-1.5">{Object.values(ENGINES).map((e) => <span key={e.label} className={`chip ${e.ready ? 'bg-teal/15 text-teal-soft' : 'bg-s2 text-dim'}`}><Icon name={e.icon} className="text-[14px]" />{e.label}</span>)}</div>
+                <p className="text-xs text-dim mt-3">Уроки пишутся модуль за модулем. В каждом есть ссылка на главу книги и обновления «было → стало».</p>
+              </div>
+            </div>
+          )}
         </div>
-        <button onClick={() => setAbout((a) => !a)} className="btn-ghost !px-2 !py-1.5 text-xs shrink-0" aria-expanded={about}>О программе <Icon name={about ? 'expand_less' : 'expand_more'} className="text-[16px]" /></button>
       </div>
-      {about && (
-        <div className="card p-4 mb-3 grid gap-4 md:grid-cols-2 pop">
-          <div>
-            <div className="label mb-2">Книги-источники</div>
-            <ul className="space-y-1 text-sm text-mute">{Object.values(BOOKS).map((b) => <li key={b} className="flex gap-2"><Icon name="menu_book" className="text-[16px] text-violet-soft shrink-0 mt-0.5" />{b}</li>)}</ul>
-          </div>
-          <div>
-            <div className="label mb-2">Движки лабораторий · готово {Object.values(ENGINES).filter((e) => e.ready).length} из {Object.keys(ENGINES).length}</div>
-            <div className="flex flex-wrap gap-1.5">{Object.values(ENGINES).map((e) => <span key={e.label} className={`chip ${e.ready ? 'bg-teal/15 text-teal-soft' : 'bg-s2 text-dim'}`}><Icon name={e.icon} className="text-[14px]" />{e.label}</span>)}</div>
-            <p className="text-xs text-dim mt-3">Уроки пишутся по структуре модуль за модулем. В каждом — ссылка на главу книги и обновления «было → стало».</p>
-          </div>
-        </div>
-      )}
-      <ol className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {courses.map((c) => {
-          const step = CS_PROGRAM.courses.indexOf(c) + 1
+
+      <h2 className="text-lg font-bold mt-8 mb-3">Шаги программы</h2>
+      <ol className="space-y-3">
+        {CS_PROGRAM.courses.map((c, i) => {
           const concepts = c.modules.reduce((a, m) => a + m.concepts.length, 0)
           const labs = c.modules.reduce((a, m) => a + m.labs.length, 0)
           return (
             <li key={c.id}>
-              <Link to={`/catalog/${c.id}`} className="card card-hover overflow-hidden flex flex-col h-full">
-                <div className="relative h-24 bg-gradient-to-br from-[#312E81] to-[#0F766E] grid-bg">
-                  <span className="absolute left-4 top-4 chip bg-black/40 backdrop-blur text-white/90 border border-white/15">Шаг {step} из {CS_PROGRAM.courses.length}</span>
-                  <span className="absolute right-4 bottom-2 font-mono text-4xl font-bold text-white/25">{c.code}</span>
-                </div>
-                <div className="p-5 flex-1 flex flex-col">
-                  <div className="font-bold text-lg leading-snug">{c.title}</div>
-                  <p className="text-sm text-mute mt-1.5 line-clamp-3 flex-1">{c.subtitle}</p>
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-4 text-xs text-mute">
+              <Link to={`/catalog/${c.id}`} className="card card-hover p-4 md:p-5 flex gap-4 items-start">
+                <div className="w-12 h-12 md:w-14 md:h-14 rounded-lg bg-gradient-to-br from-[#312E81] to-[#0F766E] grid place-items-center font-mono font-bold text-white/90 shrink-0">{c.code}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-mono text-[11px] text-violet-soft">Шаг {i + 1} из {CS_PROGRAM.courses.length}{c.requires.length ? ` · после ${c.requires.map((r) => CS_PROGRAM.courses.find((x) => x.id === r)!.code).join(', ')}` : ''}</div>
+                  <div className="font-bold text-lg leading-snug mt-0.5">{c.title}</div>
+                  <p className="text-sm text-mute mt-1 line-clamp-2">{c.subtitle}</p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5 text-xs text-mute">
                     <span className="flex items-center gap-1.5"><Icon name="view_module" className="text-[16px] text-dim" />{c.modules.length} модулей</span>
                     <span className="flex items-center gap-1.5"><Icon name="hub" className="text-[16px] text-dim" />{concepts} понятий</span>
                     <span className="flex items-center gap-1.5"><Icon name="science" className="text-[16px] text-dim" />{labs} лабораторий</span>
                     <span className="flex items-center gap-1.5"><Icon name="calendar_month" className="text-[16px] text-dim" />≈{c.weeks} нед</span>
                   </div>
-                  <span className="btn-secondary w-full mt-4">Программа курса <Icon name="arrow_forward" className="text-[18px]" /></span>
                 </div>
+                <Icon name="chevron_right" className="text-dim self-center hidden sm:block" />
               </Link>
             </li>
           )
         })}
       </ol>
-    </section>
+    </div>
   )
 }
 
@@ -83,8 +141,8 @@ export function ProgramCourse() {
   const next = CS_PROGRAM.courses[idx + 1]
 
   return (
-    <div className="max-w-5xl">
-      <Link to="/catalog" className="text-xs text-dim hover:text-ink flex items-center gap-1 mb-3"><Icon name="arrow_back" className="text-[16px]" />Каталог треков</Link>
+    <div className="max-w-5xl mx-auto">
+      <Link to={`/catalog/${CS_PROGRAM_ID}`} className="text-xs text-dim hover:text-ink flex items-center gap-1 mb-3"><Icon name="arrow_back" className="text-[16px]" />Программа Computer Science</Link>
       <div className="font-mono text-xs text-violet-soft">{CS_PROGRAM.title} · шаг {idx + 1} из {CS_PROGRAM.courses.length} · {c.code} · ≈{c.weeks} недель · {c.modules.length} модулей</div>
       <h1 className="text-2xl md:text-[32px] md:leading-10 font-extrabold tracking-tight mt-1">{c.title}</h1>
       <p className="text-mute mt-1 max-w-3xl">{c.subtitle}</p>
@@ -151,7 +209,7 @@ export function ProgramCourse() {
       </div>
 
       <div className="flex justify-between gap-2 mt-8">
-        {prev ? <Link to={`/catalog/${prev.id}`} className="btn-secondary"><Icon name="arrow_back" className="text-[18px]" />{prev.code}</Link> : <span />}
+        {prev ? <Link to={`/catalog/${prev.id}`} className="btn-secondary"><Icon name="arrow_back" className="text-[18px]" />{prev.code}</Link> : <Link to={`/catalog/${CS_PROGRAM_ID}`} className="btn-secondary"><Icon name="arrow_back" className="text-[18px]" />Все шаги</Link>}
         {next && <Link to={`/catalog/${next.id}`} className="btn-primary">{next.code}: {next.title}<Icon name="arrow_forward" className="text-[18px]" /></Link>}
       </div>
     </div>
