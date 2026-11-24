@@ -56,7 +56,7 @@ export default function Shell() {
     <div className="min-h-screen md:flex">
       <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-line bg-[#0A0E16] sticky top-0 h-screen">
         <Link to="/" className="flex items-center gap-2.5 px-5 h-16 shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet to-teal grid place-items-center font-extrabold text-sm">N</div>
+          <img src="logo.png" alt="" className="w-9 h-9 rounded-lg" />
           <div>
             <div className="font-extrabold leading-tight">NextGenLearn</div>
             <div className="text-[10px] font-bold tracking-[0.12em] text-teal-soft">NGL · PROTOTYPE</div>
@@ -87,7 +87,7 @@ export default function Shell() {
       <div className="flex-1 min-w-0">
         <header className="sticky top-0 z-20 h-14 md:h-16 border-b border-line bg-canvas/85 backdrop-blur-md flex items-center gap-3 px-4 md:px-8">
           <Link to="/" className="md:hidden flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet to-teal grid place-items-center font-extrabold text-xs">N</div>
+            <img src="logo.png" alt="" className="w-7 h-7 rounded-lg" />
             <span className="font-extrabold">NGL</span>
           </Link>
           <Link to="/catalog" className="hidden md:flex flex-1 max-w-md items-center gap-2 rounded-lg bg-[#0F172A] border border-line px-3 py-2 text-sm text-dim hover:border-s3">
