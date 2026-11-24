@@ -8,6 +8,7 @@ import MentorDrawer from './MentorDrawer'
 const GROUPS = [
   { title: 'Обучение', items: [
     { to: '/', icon: 'home', label: 'Сегодня', end: true },
+    { to: '/program', icon: 'school', label: 'Программа CS' },
     { to: '/catalog', icon: 'explore', label: 'Каталог треков' },
     { to: '/track', icon: 'hub', label: 'Древо знаний' },
     { to: '/labs', icon: 'science', label: 'Лаборатории' },

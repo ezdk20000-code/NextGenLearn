@@ -5,6 +5,7 @@ import './index.css'
 import { StoreProvider } from './store'
 import { AiProvider } from './ai/AiContext'
 import AiSettings from './pages/AiSettings'
+import { ProgramCourse, ProgramOverview } from './pages/Program'
 import Shell from './components/Shell'
 import Today from './pages/Today'
 import Catalog from './pages/Catalog'
@@ -38,6 +39,8 @@ createRoot(document.getElementById('root')!).render(
           <Route element={<Shell />}>
             <Route index element={<Today />} />
             <Route path="catalog" element={<Catalog />} />
+            <Route path="program" element={<ProgramOverview />} />
+            <Route path="program/:id" element={<ProgramCourse />} />
             <Route path="catalog/:id" element={<TrackDetail />} />
             <Route path="new" element={<NewTopic />} />
             <Route path="track" element={<Track />} />

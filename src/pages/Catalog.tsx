@@ -68,6 +68,16 @@ export default function Catalog() {
         </div>
       </section>
 
+      <Link to="/program" className="card card-hover p-5 md:p-6 flex flex-col md:flex-row gap-4 md:items-center border-violet/40 shadow-glow-violet">
+        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-violet to-teal grid place-items-center shrink-0"><Icon name="school" fill /></div>
+        <div className="flex-1">
+          <div className="label text-violet-soft">Большая программа · 7 курсов</div>
+          <div className="font-bold text-lg mt-0.5">Computer Science: от вентиля до интернета</div>
+          <p className="text-sm text-mute mt-0.5">Собрана по твоим 9 книгам: от логических вентилей и своего компьютера до ОС, сетей и безопасности.</p>
+        </div>
+        <span className="btn-primary shrink-0">Смотреть программу <Icon name="arrow_forward" className="text-[18px]" /></span>
+      </Link>
+
       {/* Продолжить */}
       {enrolled.length > 0 && !filtersOn && (
         <section>
