@@ -6,6 +6,7 @@ import { Icon } from '../components/ui'
 import type { LabProps } from '../labs/kit'
 import { BitsLab, BytesLab, LogicSeries, MorseLab, NAND_TASKS, SwitchesLab } from '../labs/cs0-a'
 import HdlLab from '../hdl/HdlLab'
+import HackLab from '../hack/HackLab'
 import { ADDER_TASKS, CounterLab, CpuLab, FloatLab, LatchLab, RamLab, TwosLab } from '../labs/cs0-b'
 
 /** Лаборатории курсов программы CS: id → интерактивная модель. */
@@ -25,6 +26,7 @@ const LABS: Record<string, ComponentType<LabProps>> = {
   'cs1-p1': (p) => <HdlLab project={1} {...p} />,
   'cs1-p2': (p) => <HdlLab project={2} {...p} />,
   'cs1-p3': (p) => <HdlLab project={3} {...p} />,
+  'cs1-p4': HackLab,
 }
 export const CS_LAB_IDS = Object.keys(LABS)
 
