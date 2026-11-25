@@ -6,7 +6,7 @@
 export interface Pin { name: string; width: number }
 export interface ChipSpec {
   name: string
-  project: 1 | 2 | 3
+  project: 1 | 2 | 3 | 5
   inputs: Pin[]
   outputs: Pin[]
   /** Описание для ученика */
@@ -16,8 +16,13 @@ export interface ChipSpec {
   /** Есть такт: на фронте обновляет состояние */
   tick?: (ins: Record<string, number>, st: ChipState) => void
   newState?: () => ChipState
+  relevant?: Relevant
+  builtin?: boolean
 }
-export type ChipState = { v?: number; mem?: Map<number, number> }
+export type ChipState = { v?: number; mem?: Map<number, number>; key?: number; A?: number; D?: number; PC?: number; rom?: number[] }
+
+/** Какие выходы сравнивать в тесте (для CPU outM важен только при writeM = 1). */
+export type Relevant = (want: Record<string, number>) => string[]
 
 const M16 = 0xffff
 const p = (name: string, width = 1): Pin => ({ name, width })
@@ -37,7 +42,7 @@ function ram(name: string, addrBits: number, project: 3): ChipSpec {
 }
 
 export const CHIPS: ChipSpec[] = [
-  { name: 'Nand', project: 1, inputs: [p('a'), p('b')], outputs: [p('out')], doc: 'Встроенный. out = НЕ (a И b). Из него строится всё остальное.', eval: (i) => ({ out: i.a & i.b ? 0 : 1 }) },
+  { name: 'Nand', project: 1, builtin: true, inputs: [p('a'), p('b')], outputs: [p('out')], doc: 'Встроенный. out = НЕ (a И b). Из него строится всё остальное.', eval: (i) => ({ out: i.a & i.b ? 0 : 1 }) },
   { name: 'Not', project: 1, inputs: [p('in')], outputs: [p('out')], doc: 'Инвертор: out = НЕ in.', eval: (i) => ({ out: i.in ? 0 : 1 }) },
   { name: 'And', project: 1, inputs: [p('a'), p('b')], outputs: [p('out')], doc: 'out = 1, только если a = 1 и b = 1.', eval: (i) => ({ out: i.a & i.b }) },
   { name: 'Or', project: 1, inputs: [p('a'), p('b')], outputs: [p('out')], doc: 'out = 1, если хотя бы один вход равен 1.', eval: (i) => ({ out: i.a | i.b }) },
@@ -70,7 +75,7 @@ export const CHIPS: ChipSpec[] = [
     },
   },
 
-  { name: 'DFF', project: 3, inputs: [p('in')], outputs: [p('out')], doc: 'Встроенный D-триггер: out(t) = in(t − 1). Единственный «примитив времени».', newState: () => ({ v: 0 }), eval: (_i, s) => ({ out: s.v! }), tick: (i, s) => { s.v = i.in } },
+  { name: 'DFF', project: 3, builtin: true, inputs: [p('in')], outputs: [p('out')], doc: 'Встроенный D-триггер: out(t) = in(t − 1). Единственный «примитив времени».', newState: () => ({ v: 0 }), eval: (_i, s) => ({ out: s.v! }), tick: (i, s) => { s.v = i.in } },
   { name: 'Bit', project: 3, inputs: [p('in'), p('load')], outputs: [p('out')], doc: 'Бит памяти: если load = 1, на следующем такте out = in, иначе хранит прежнее значение.', newState: () => ({ v: 0 }), eval: (_i, s) => ({ out: s.v! }), tick: (i, s) => { if (i.load) s.v = i.in } },
   { name: 'Register', project: 3, inputs: [p('in', 16), p('load')], outputs: [p('out', 16)], doc: '16-битный регистр: Bit для каждого разряда с общим load.', newState: () => ({ v: 0 }), eval: (_i, s) => ({ out: s.v! }), tick: (i, s) => { if (i.load) s.v = i.in & M16 } },
   ram('RAM8', 3, 3), ram('RAM64', 6, 3), ram('RAM512', 9, 3), ram('RAM4K', 12, 3), ram('RAM16K', 14, 3),
@@ -82,13 +87,61 @@ export const CHIPS: ChipSpec[] = [
   },
 ]
 
+
+// ─── Проект 5: компьютер Hack ───
+const M15 = 0x7fff
+function cpuAlu(x: number, y: number, c: number) {
+  if (c & 32) x = 0; if (c & 16) x = not16(x)
+  if (c & 8) y = 0; if (c & 4) y = not16(y)
+  let o = c & 2 ? (x + y) & M16 : x & y
+  if (c & 1) o = not16(o)
+  return o
+}
+function cpuOut(i: Record<string, number>, s: ChipState) {
+  const w = i.instruction, isC = (w >> 15) & 1
+  const out = cpuAlu(s.D!, (w >> 12) & 1 ? i.inM : s.A!, (w >> 6) & 63)
+  return { out, isC, w }
+}
+const reg = (name: string): ChipSpec => ({ name, project: 5, builtin: true, inputs: [p('in', 16), p('load')], outputs: [p('out', 16)], doc: `Встроенный 16-битный регистр (то же, что Register; отдельное имя помогает симулятору показывать регистр ${name[0]} процессора).`, newState: () => ({ v: 0 }), eval: (_i, s) => ({ out: s.v! }), tick: (i, s) => { if (i.load) s.v = i.in & M16 } })
+CHIPS.push(
+  reg('ARegister'), reg('DRegister'),
+  { name: 'ROM32K', project: 5, builtin: true, inputs: [p('address', 15)], outputs: [p('out', 16)], doc: 'Встроенная память команд на 32K слов: out = ROM[address]. Программу в неё загружает симулятор.', newState: () => ({ rom: [] }), eval: (i, s) => ({ out: s.rom![i.address] ?? 0 }) },
+  { name: 'Screen', project: 5, builtin: true, inputs: [p('in', 16), p('load'), p('address', 13)], outputs: [p('out', 16)], doc: 'Встроенная видеопамять 8K слов (512×256 точек). Работает как RAM, а её содержимое показывается на экране.', newState: () => ({ mem: new Map() }), eval: (i, s) => ({ out: s.mem!.get(i.address) ?? 0 }), tick: (i, s) => { if (i.load) s.mem!.set(i.address, i.in & M16) } },
+  { name: 'Keyboard', project: 5, builtin: true, inputs: [], outputs: [p('out', 16)], doc: 'Встроенная клавиатура: out — код нажатой клавиши или 0.', newState: () => ({ key: 0 }), eval: (_i, s) => ({ out: s.key! }) },
+  {
+    name: 'Memory', project: 5, inputs: [p('in', 16), p('load'), p('address', 15)], outputs: [p('out', 16)],
+    doc: 'Вся память данных Hack: адреса 0–16383 — RAM16K, 16384–24575 — Screen, 24576 — Keyboard. Чтение — out по address, запись — по такту при load = 1 (в клавиатуру не пишется).',
+    newState: () => ({ mem: new Map(), key: 0 }),
+    eval: (i, s) => ({ out: i.address === 24576 ? s.key! : i.address < 24576 ? s.mem!.get(i.address) ?? 0 : 0 }),
+    tick: (i, s) => { if (i.load && i.address < 24576) s.mem!.set(i.address, i.in & M16) },
+  },
+  {
+    name: 'CPU', project: 5,
+    inputs: [p('inM', 16), p('instruction', 16), p('reset')], outputs: [p('outM', 16), p('writeM'), p('addressM', 15), p('pc', 15)],
+    doc: 'Процессор Hack. Выполняет instruction: A-инструкция кладёт число в A; C-инструкция считает в АЛУ (вход y — A или inM по биту a), пишет результат в A/D/M по битам d1–d3 и при выполнении условия j1–j3 переходит по адресу A. outM и writeM — запись в память по адресу addressM = A. pc — адрес следующей инструкции; reset = 1 обнуляет pc.',
+    newState: () => ({ A: 0, D: 0, PC: 0 }),
+    relevant: (w) => (w.writeM ? ['outM', 'writeM', 'addressM', 'pc'] : ['writeM', 'addressM', 'pc']),
+    eval: (i, s) => { const { out, isC, w } = cpuOut(i, s); return { outM: out, writeM: isC & (w >> 3) & 1, addressM: s.A! & M15, pc: s.PC! & M15 } },
+    tick: (i, s) => {
+      const { out, isC, w } = cpuOut(i, s)
+      const neg = (out >> 15) & 1, zero = out === 0 ? 1 : 0, pos = !neg && !zero ? 1 : 0
+      const jump = isC && (((w >> 2) & 1 & neg) | ((w >> 1) & 1 & zero) | (w & 1 & pos))
+      const oldA = s.A!
+      s.PC = i.reset ? 0 : jump ? oldA & M15 : (s.PC! + 1) & M15
+      if (!isC) s.A = w
+      else { if ((w >> 5) & 1) s.A = out; if ((w >> 4) & 1) s.D = out }
+    },
+  },
+  { name: 'Computer', project: 5, inputs: [p('reset')], outputs: [], doc: 'Весь компьютер Hack: ROM32K, CPU и Memory. При reset = 1 программа начинается с адреса 0. Выходов нет — результат виден в памяти и на экране.', newState: () => ({}), eval: () => ({}), tick: () => {} },
+)
+
 export const chipByName = (n: string) => CHIPS.find((c) => c.name === n)
 /** Чипы, которые ученик собирает сам (Nand и DFF — встроенные). */
-export const BUILDABLE = CHIPS.filter((c) => c.name !== 'Nand' && c.name !== 'DFF')
+export const BUILDABLE = CHIPS.filter((c) => !c.builtin)
 export const isSequential = (c: ChipSpec) => !!c.tick
 
 /** Заготовка HDL-файла: интерфейс задан, PARTS пишет ученик. */
 export function skeleton(c: ChipSpec): string {
   const pins = (ps: Pin[]) => ps.map((x) => (x.width > 1 ? `${x.name}[${x.width}]` : x.name)).join(', ')
-  return `// ${c.doc}\nCHIP ${c.name} {\n    IN ${pins(c.inputs)};\n    OUT ${pins(c.outputs)};\n\n    PARTS:\n    // Твоя реализация\n}\n`
+  return `// ${c.doc}\nCHIP ${c.name} {\n    IN ${pins(c.inputs)};\n${c.outputs.length ? `    OUT ${pins(c.outputs)};\n` : ''}\n    PARTS:\n    // Твоя реализация\n}\n`
 }

@@ -42,6 +42,9 @@ export const HINTS: Record<string, string> = {
   RAM512: 'Восемь RAM64; address[6..8] выбирает блок.',
   RAM4K: 'Восемь RAM512; address[9..11] выбирает блок.',
   RAM16K: 'Четыре RAM4K: DMux4Way и Mux4Way16 по address[12..13].',
+  Memory: 'Два старших бита адреса (address[13..14]) решают, куда идти: 00 и 01 — RAM16K, 10 — Screen, 11 — Keyboard. DMux4Way распределит load, Mux4Way16 выберет выход.',
+  CPU: 'Нарисуй схему по книге: Mux16 перед регистром A (инструкция или выход АЛУ), ARegister, DRegister, Mux16 «A или inM» по биту a, ALU с битами c1–c6, логика записи (биты d) и переходов (биты j и флаги zr, ng), PC с load = «переход» и inc = true.',
+  Computer: 'Три части: ROM32K выдаёт инструкцию по pc, CPU её выполняет, Memory принимает outM/writeM/addressM и отдаёт inM.',
   PC: 'Register с load=true, а на вход — цепочка Mux16 в порядке приоритета: inc, затем load, затем reset (последний Mux16 главнее всех).',
 }
 
@@ -137,7 +140,7 @@ function Schematic({ circuit, spec }: { circuit: Circuit; spec: ChipSpec }) {
 }
 
 /** HDL-песочница проекта: список чипов, редактор, схема, автотесты. */
-export default function HdlLab({ project, onDone }: { project: 1 | 2 | 3; onDone: (mistakes: number) => void }) {
+export default function HdlLab({ project, onDone }: { project: 1 | 2 | 3 | 5; onDone: (mistakes: number) => void }) {
   const chips = BUILDABLE.filter((c) => c.project === project)
   const [saved, setSaved] = useState<Saved>(loadSaved)
   const firstOpen = chips.find((c) => !saved.solved.includes(c.name)) ?? chips[0]
@@ -237,7 +240,7 @@ export default function HdlLab({ project, onDone }: { project: 1 | 2 | 3; onDone
                 </div>
                 <div className="rounded-lg border border-line p-3 text-xs text-mute">
                   <div className="label mb-1">Можно использовать</div>
-                  <div className="font-mono">{['Nand', ...(project === 3 ? ['DFF'] : []), ...ORDER.filter((n) => n !== 'Nand' && n !== 'DFF' && allowed(cur)(n))].join(', ')}</div>
+                  <div className="font-mono">{['Nand', ...(project >= 3 ? ['DFF'] : []), ...(project === 5 ? ['ARegister', 'DRegister', 'ROM32K', 'Screen', 'Keyboard'] : []), ...ORDER.filter((n) => !chipByName(n)!.builtin && allowed(cur)(n))].join(', ')}</div>
                   <p className="mt-2">Синтаксис: <code className="font-mono text-teal-soft">Чип(вывод=провод, вывод[0..7]=провод, вывод=true);</code> Нумерация битов справа налево, бит 0 — младший.</p>
                 </div>
               </div>
@@ -272,7 +275,15 @@ export default function HdlLab({ project, onDone }: { project: 1 | 2 | 3; onDone
           </div>
           {!result && !error && <p className="text-sm text-dim">Нажми «Запустить тесты»: схема получит {isSequential(spec) ? 'последовательность входов с тактами' : 'все нужные комбинации входов'} и сравнится с эталоном.</p>}
           {error && <p className="text-sm text-rose-soft">Код не собрался — исправь ошибку в редакторе.</p>}
-          {result && (
+          {result && spec.name === 'Computer' && (
+            <ul className="space-y-1.5 text-xs font-mono">{result.rows.map((r) => (
+              <li key={r.step} className={`rounded-md p-2 ${r.ok ? 'bg-teal/10' : 'bg-rose/10'}`}>
+                <div className="flex justify-between"><span>{r.step}</span><span>{r.ok ? '✓' : '✗'}</span></div>
+                {!r.ok && <div className="text-rose-soft mt-1">{Object.keys(r.want).map((k) => `${k}: ${r.got[k]}≠${r.want[k]}`).join(', ') || 'В схеме нет частей ROM32K и Memory'}</div>}
+              </li>
+            ))}</ul>
+          )}
+          {result && spec.name !== 'Computer' && (
             <div className="overflow-x-auto">
               <table className="w-full text-[11px] font-mono">
                 <thead><tr className="text-dim">{isSequential(spec) && <th className="text-left py-1">t</th>}{spec.inputs.slice(0, 4).map((p) => <th key={p.name} className="text-left py-1">{p.name}</th>)}{spec.outputs.slice(0, 3).map((p) => <th key={p.name} className="text-left py-1">{p.name}</th>)}<th /></tr></thead>
@@ -302,7 +313,7 @@ export default function HdlLab({ project, onDone }: { project: 1 | 2 | 3; onDone
       </div>
       <div className="card px-4 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-mute font-mono">
         <span className="flex items-center gap-1.5"><Icon name="memory" className="text-[15px] text-teal-soft" />Части: {partsUsed.length ? partsUsed.map(([n, k]) => `${n} ×${k}`).join(', ') : '—'}</span>
-        <span>Встроенные: Nand{project === 3 ? ', DFF' : ''}</span>
+        <span>Встроенные: Nand{project >= 3 ? ', DFF' : ''}{project === 5 ? ', ARegister, DRegister, ROM32K, Screen, Keyboard' : ''}</span>
         <span className="ml-auto">Код сохраняется в этом браузере</span>
       </div>
     </div>

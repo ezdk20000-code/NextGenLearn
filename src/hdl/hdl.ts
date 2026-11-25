@@ -59,7 +59,7 @@ export function parse(src: string): Parsed {
     return pins
   }
   const inputs = peek()?.t === 'IN' ? pinList('IN') : []
-  const outputs = pinList('OUT')
+  const outputs = peek()?.t === 'OUT' ? pinList('OUT') : []
   const kw = next()
   if (kw.t === 'BUILTIN') throw new HdlError('встроенные чипы описывать не нужно — собери этот чип из частей', kw.line)
   if (kw.t !== 'PARTS') throw new HdlError('ожидалось «PARTS:»', kw.line)

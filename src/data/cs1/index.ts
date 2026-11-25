@@ -4,14 +4,16 @@ import { M1 } from './m1'
 import { M2 } from './m2'
 import { M3 } from './m3'
 import { M4 } from './m4'
+import { M5 } from './m5'
 
 /** Написанные модули CS1. Остальные модули программы добавляются по мере готовности. */
-export const CS1_MODULES: CsModule[] = [M1, M2, M3, M4]
+export const CS1_MODULES: CsModule[] = [M1, M2, M3, M4, M5]
 
 export const CS1_LABS: CsLabSpec[] = [
   { id: 'cs1-p1', node: 'cs1-mux', icon: 'developer_board', title: 'Проект 1: 15 элементарных чипов', desc: 'Опиши на HDL чипы от Not до DMux8Way, используя только Nand и уже собранные чипы. Каждый проходит автотесты.', skills: ['HDL', 'Mux/DMux', 'шины'], minutes: 180, primitive: 'HDL-песочница' },
   { id: 'cs1-p2', node: 'cs1-alu', icon: 'calculate', title: 'Проект 2: сумматоры и АЛУ', desc: 'HalfAdder, FullAdder, Add16, Inc16 и АЛУ Hack с 18 функциями и флагами.', skills: ['сумматоры', 'АЛУ', 'флаги'], minutes: 150, primitive: 'HDL-песочница' },
   { id: 'cs1-p4', node: 'cs1-io', icon: 'terminal', title: 'Проект 4: Mult и Fill', desc: 'Программы на ассемблере Hack в эмуляторе: умножение циклом и заливка экрана по клавиатуре. Пошаговое выполнение, ROM, регистры, декодер, экран.', skills: ['ассемблер Hack', 'циклы', 'ввод-вывод'], minutes: 120, primitive: 'Эмулятор процессора' },
+  { id: 'cs1-p5', node: 'cs1-computer', icon: 'developer_board', title: 'Проект 5: CPU и Computer', desc: 'Memory, процессор Hack и весь компьютер на HDL. Тест загружает программы в ROM и проверяет память после выполнения.', skills: ['CPU', 'декодирование', 'компьютер'], minutes: 240, primitive: 'HDL-песочница' },
   { id: 'cs1-p3', node: 'cs1-pc', icon: 'memory_alt', title: 'Проект 3: от бита до RAM16K', desc: 'Bit, Register, RAM8 … RAM16K и счётчик команд PC — вся память компьютера Hack.', skills: ['DFF', 'регистры', 'RAM', 'PC'], minutes: 150, primitive: 'HDL-песочница' },
 ]
 

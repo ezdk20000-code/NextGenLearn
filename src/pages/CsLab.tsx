@@ -27,6 +27,7 @@ const LABS: Record<string, ComponentType<LabProps>> = {
   'cs1-p2': (p) => <HdlLab project={2} {...p} />,
   'cs1-p3': (p) => <HdlLab project={3} {...p} />,
   'cs1-p4': HackLab,
+  'cs1-p5': (p) => <HdlLab project={5} {...p} />,
 }
 export const CS_LAB_IDS = Object.keys(LABS)
 
