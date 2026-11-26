@@ -7,6 +7,10 @@ import type { LabProps } from '../labs/kit'
 import { BitsLab, BytesLab, LogicSeries, MorseLab, NAND_TASKS, SwitchesLab } from '../labs/cs0-a'
 import HdlLab from '../hdl/HdlLab'
 import HackLab from '../hack/HackLab'
+import CodeLab from '../code/CodeLab'
+import JackLab from '../code/JackLab'
+import VmLab from '../vm/VmLab'
+import { CODE_PROJECTS } from '../code/projects'
 import { ADDER_TASKS, CounterLab, CpuLab, FloatLab, LatchLab, RamLab, TwosLab } from '../labs/cs0-b'
 
 /** Лаборатории курсов программы CS: id → интерактивная модель. */
@@ -28,6 +32,14 @@ const LABS: Record<string, ComponentType<LabProps>> = {
   'cs1-p3': (p) => <HdlLab project={3} {...p} />,
   'cs1-p4': HackLab,
   'cs1-p5': (p) => <HdlLab project={5} {...p} />,
+  'cs1-p6': (p) => <CodeLab project={CODE_PROJECTS['cs1-p6']} {...p} />,
+  'cs1-vm': VmLab,
+  'cs1-p7': (p) => <CodeLab project={CODE_PROJECTS['cs1-p7']} {...p} />,
+  'cs1-p8': (p) => <CodeLab project={CODE_PROJECTS['cs1-p8']} {...p} />,
+  'cs1-p9': (p) => <JackLab mode="game" {...p} />,
+  'cs1-p10': (p) => <CodeLab project={CODE_PROJECTS['cs1-p10']} {...p} />,
+  'cs1-p11': (p) => <CodeLab project={CODE_PROJECTS['cs1-p11']} {...p} />,
+  'cs1-p12': (p) => <JackLab mode="os" {...p} />,
 }
 export const CS_LAB_IDS = Object.keys(LABS)
 
@@ -41,7 +53,7 @@ export default function CsLab() {
   const track = trackById(lab.trackId)
   const done = s.labsDone.includes(id)
   return (
-    <div className={id.startsWith('cs1-p') ? 'max-w-[1500px] mx-auto' : 'max-w-6xl mx-auto'}>
+    <div className={id.startsWith('cs1-') ? 'max-w-[1500px] mx-auto' : 'max-w-6xl mx-auto'}>
       <div className="flex items-center gap-2 text-xs text-dim mb-3 flex-wrap">
         <Link to={`/track/${lab.trackId}`} className="hover:text-ink flex items-center gap-1"><Icon name="arrow_back" className="text-[16px]" />{track?.title}</Link>
         <span>/</span><Link to={`/lesson/${lab.nodeId}`} className="hover:text-ink">{node?.title}</Link>
