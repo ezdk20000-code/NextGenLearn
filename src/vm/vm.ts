@@ -147,6 +147,7 @@ export class Vm {
         this.ram[0] = this.ram[2] + 1
         this.ram[4] = this.ram[frame - 1]; this.ram[3] = this.ram[frame - 2]; this.ram[2] = this.ram[frame - 3]; this.ram[1] = this.ram[frame - 4]
         this.calls.pop()
+        if (ret === -2) { this.nested = true; return }
         if (ret < 0 || this.calls.length === 0 && ret === -1) { this.halted = true; return }
         this.pc = ret
         break
@@ -157,6 +158,20 @@ export class Vm {
     const t = this.labels.get(label)
     if (t === undefined) throw new VmError(`метка ${label.split('$')[1]} не найдена в функции ${label.split('$')[0] || '(вне функций)'}`)
     this.pc = t
+  }
+  nested = false
+  /** Синхронно вызвать функцию из ВМ-кода (нужно встроенной ОС, когда ученик заменил класс). */
+  invoke(name: string, args: number[]) {
+    const pc = this.pc
+    args.forEach((a) => this.push(a))
+    this.nested = false
+    this.call(name, args.length, -2)
+    for (let i = 0; i < 1_000_000 && !this.nested && !this.halted; i++) this.step()
+    if (!this.nested) throw new VmError(`${name} не вернула результат`)
+    this.nested = false
+    const r = this.pop()
+    this.pc = pc
+    return r
   }
   run(limit = 5_000_000) { for (let i = 0; i < limit && !this.halted; i++) this.step(); return this.halted }
 }

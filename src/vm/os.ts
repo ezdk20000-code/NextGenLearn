@@ -37,7 +37,12 @@ function dealloc(vm: Vm, addr: number) {
 }
 
 // Строка Jack в куче: [maxLength, length, символы…]
-export const jsString = (vm: Vm, p: number) => { let r = ''; for (let k = 0; k < vm.ram[p + 1]; k++) r += String.fromCharCode(vm.ram[p + 2 + k]); return r }
+export const jsString = (vm: Vm, p: number) => {
+  let r = ''
+  if (vm.fns.has('String.length')) { const n = vm.invoke('String.length', [p]); for (let k = 0; k < n; k++) r += String.fromCharCode(vm.invoke('String.charAt', [p, k])); return r }
+  for (let k = 0; k < vm.ram[p + 1]; k++) r += String.fromCharCode(vm.ram[p + 2 + k])
+  return r
+}
 
 function pixel(vm: Vm, x: number, y: number, on: boolean) {
   if (x < 0 || x > 511 || y < 0 || y > 255) return
